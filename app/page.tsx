@@ -100,6 +100,17 @@ interface Expense {
   createdAt: string
 }
 
+interface Customer {
+  id: number
+  name: string
+  contactNumber: string
+  address?: string
+  totalRevenue: number
+  totalRentals: number
+  lastRentalDate: Date | null
+  createdAt: string
+}
+
 export default function Home() {
   const [pin, setPin] = useState('')
   const [user, setUser] = useState<User | null>(null)
@@ -154,7 +165,7 @@ export default function Home() {
   const [operatorSalary, setOperatorSalary] = useState('')
   const [otherExpenses, setOtherExpenses] = useState<{ key: string; value: string }[]>([])
   const [rentals, setRentals] = useState<Rental[]>([])
-  const [customers, setCustomers] = useState<DummyCustomer[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [expenseDescription, setExpenseDescription] = useState('')
   const [expenseAmount, setExpenseAmount] = useState('')
@@ -184,6 +195,7 @@ export default function Home() {
   })
   const [editingRental, setEditingRental] = useState<Rental | null>(null)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [editRentalData, setEditRentalData] = useState({
     machineType: '',
     unitType: '',
@@ -603,6 +615,16 @@ if (user.role === 'admin') {
             >
               All Expenses
             </button>
+            <button
+              onClick={() => setAdminActiveTab('customers')}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                adminActiveTab === 'customers'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Customers
+            </button>
           </div>
 
           {adminActiveTab === 'overview' && (
@@ -847,6 +869,57 @@ if (user.role === 'admin') {
               </div>
             </div>
           )}
+
+          {adminActiveTab === 'customers' && (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="p-6 border-b">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold">All Customers</h2>
+                  <button
+                    onClick={() => {
+                      fetchRentals()
+                      fetchCustomers()
+                      fetchExpenses()
+                    }}
+                    className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                  >
+                    <RefreshCw size={16} />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact Number</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Rentals</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Rental Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {customers.map((customer) => (
+                      <tr key={customer.id} onClick={() => setSelectedCustomer(customer)} className="cursor-pointer hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">{customer.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{customer.contactNumber}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{customer.address || 'N/A'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-green-600 font-semibold">
+                          {formatCurrency(customer.totalRevenue)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">{customer.totalRentals}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {customer.lastRentalDate ? new Date(customer.lastRentalDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1058,6 +1131,90 @@ if (user.role === 'admin') {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Rentals Modal */}
+      {selectedCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Rentals for {selectedCustomer.name}</h2>
+              <button
+                onClick={() => setSelectedCustomer(null)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {rentals.filter(rental => rental.customer.contactNumber === selectedCustomer.contactNumber).length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No rentals found for this customer.</p>
+              ) : (
+                <div className="space-y-4">
+                  {rentals
+                    .filter(rental => rental.customer.contactNumber === selectedCustomer.contactNumber)
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((rental) => (
+                      <div key={rental.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <span className="font-medium text-gray-700">Date:</span>
+                            <div>{new Date(rental.date).toLocaleDateString()}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Machine:</span>
+                            <div className="capitalize">{rental.machineType}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Quantity:</span>
+                            <div>{rental.quantity} {rental.unitType}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Amount:</span>
+                            <div className="text-green-600 font-semibold">{formatCurrency(rental.totalAmount)}</div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <span className="font-medium text-gray-700">Operator:</span>
+                            <div>{rental.operator.name}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Location:</span>
+                            <div>{rental.customer.address || 'N/A'}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Contact:</span>
+                            <div>{rental.customer.contactNumber}</div>
+                          </div>
+                        </div>
+                        {rental.description && (
+                          <div className="mb-4">
+                            <span className="font-medium text-gray-700">Description:</span>
+                            <div className="mt-1">{rental.description}</div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-700">Diesel Cost:</span>
+                            <div className="text-red-600">{formatCurrency(rental.dieselCost)}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Maintenance Cost:</span>
+                            <div className="text-red-600">{formatCurrency(rental.maintenanceCost)}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Operator Salary:</span>
+                            <div className="text-red-600">{formatCurrency(rental.operatorSalary)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
