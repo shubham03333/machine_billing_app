@@ -8,7 +8,7 @@
 
 - [x] Add PUT method to rentals/[id]/route.ts for updating rental records
 - [x] Create expenses/[id]/route.ts with PUT and DELETE methods for individual expense operations
-- [ ] Update admin dashboard in page.tsx to add edit buttons next to delete buttons for rentals and expenses
-- [ ] Implement edit modals/forms for both rentals and expenses with proper validation
-- [ ] Add state management for edit mode and selected items
-- [ ] Test the edit functionality for both rentals and expenses
+- [x] Update admin dashboard in page.tsx to add edit buttons next to delete buttons for rentals and expenses
+- [x] Implement edit modals/forms for both rentals and expenses with proper validation
+- [x] Add state management for edit mode and selected items
+- [x] Test the edit functionality for both rentals and expenses

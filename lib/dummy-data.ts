@@ -113,6 +113,14 @@ export const dummyCustomers: DummyCustomer[] = [
     createdAt: new Date('2023-09-03'),
     updatedAt: new Date('2023-09-03'),
   },
+  {
+    id: 4,
+    name: 'sura',
+    contactNumber: '7558379425',
+    address: 'bhi',
+    createdAt: new Date('2023-09-04'),
+    updatedAt: new Date('2023-09-04'),
+  },
 ];
 
 export const dummyRentals: DummyRental[] = [

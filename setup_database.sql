@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS Customer (
 CREATE TABLE IF NOT EXISTS Rental (
     id INT AUTO_INCREMENT PRIMARY KEY,
     machineType VARCHAR(255) NOT NULL COMMENT 'tractor, harvester, excavator',
-    unitType VARCHAR(255) NOT NULL COMMENT 'hourly, trip, acre',
+    unitType VARCHAR(255) NOT NULL COMMENT 'hourly, trip, acre, guntha',
     quantity FLOAT NOT NULL,
     acreage FLOAT NULL COMMENT 'For acre-based rentals, supports decimals',
     pricePerUnit FLOAT NOT NULL,

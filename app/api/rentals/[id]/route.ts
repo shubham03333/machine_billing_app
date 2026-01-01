@@ -19,6 +19,7 @@ export async function PUT(
       quantity,
       pricePerUnit,
       totalAmount,
+      description,
       customerName,
       customerContact,
       customerAddress,
@@ -59,6 +60,7 @@ export async function PUT(
         quantity: parseFloat(quantity),
         pricePerUnit: parseFloat(pricePerUnit),
         totalAmount: parseFloat(totalAmount),
+        description: description || null,
         dieselCost: parseFloat(dieselCost || 0),
         maintenanceCost: parseFloat(maintenanceCost || 0),
         operatorSalary: parseFloat(operatorSalary || 0)

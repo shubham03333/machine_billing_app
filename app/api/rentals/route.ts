@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { machineType, unitType, quantity, acreage, pricePerUnit, totalAmount, customerName, customerContact, customerAddress, operatorId, date, dieselCost, maintenanceCost, operatorSalary } = await request.json()
+    const { machineType, unitType, quantity, acreage, pricePerUnit, totalAmount, description, customerName, customerContact, customerAddress, operatorId, date, dieselCost, maintenanceCost, operatorSalary } = await request.json()
 
     if (!machineType || !unitType || !quantity || !pricePerUnit || !totalAmount || !customerName || !customerContact || !operatorId || !date) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         acreage: acreage ? parseFloat(acreage) : null,
         pricePerUnit: parseFloat(pricePerUnit),
         totalAmount: parseFloat(totalAmount),
+        description: description || null,
         customerId: customer.id,
         operatorId: parseInt(operatorId),
         date: new Date(date),

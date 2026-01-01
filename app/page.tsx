@@ -1,22 +1,68 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Minus, LogIn, BarChart3, Trash2, Plus } from 'lucide-react'
+import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw } from 'lucide-react'
 import { DummyCustomer, getDummyCustomerByContact } from '@/lib/dummy-data'
 
 const STANDARD_PRICES = {
-  tractor: { hourly: 500, trip: 2000, acre: 300 },
-  harvester: { hourly: 800, trip: 3500, acre: 450 },
-  excavator: { hourly: 700, trip: 3000, acre: 400 }
+  tractor: { hourly: 500, trip: 500, acre: 1500 },
+  harvester: { hourly: 3000, trip: 3000, acre: 3000, guntha: 75 },
+  excavator: { hourly: 1000, trip: 200, acre: 400 }
 }
 
 const MACHINES = [
-  { id: 'harvester', name: 'Harvester', units: ['hourly', 'acre'] },
+  { id: 'harvester', name: 'Harvester', units: ['acre', 'guntha', 'hourly'] },
   { id: 'excavator', name: 'Excavator', units: ['hourly', 'trip'] },
   { id: 'tractor', name: 'Tractor', units: ['hourly', 'trip'] }
 ]
 
-const UNITS = ['hourly', 'trip', 'acre']
+const UNITS = ['hourly', 'trip', 'acre', 'guntha']
+
+const parseQuantity = (input: string, unit: string) => {
+  const trimmed = input.trim();
+  const hasUnits = /acre|guntha/i.test(trimmed);
+
+  if (!hasUnits) {
+    if (unit === 'acre') {
+      const parts = trimmed.split('.');
+      if (parts.length === 2) {
+        const acres = parseInt(parts[0]) || 0;
+        const gunthas = parseInt(parts[1]) || 0;
+        return acres + gunthas / 40;
+      }
+    }
+    const num = parseFloat(trimmed);
+    return isNaN(num) ? 0 : num;
+  }
+
+  const regex = /(\d+(?:\.\d+)?)\s*(acre|guntha)/gi;
+  let totalGunthas = 0;
+  let match;
+  while ((match = regex.exec(trimmed)) !== null) {
+    const value = parseFloat(match[1]);
+    const unitType = match[2].toLowerCase();
+    if (unitType === 'acre') {
+      totalGunthas += value * 40;
+    } else if (unitType === 'guntha') {
+      totalGunthas += value;
+    }
+  }
+  if (unit === 'guntha') {
+    return totalGunthas;
+  } else if (unit === 'acre') {
+    return totalGunthas / 40;
+  }
+  return 0;
+};
+
+const formatQuantityForDisplay = (quantity: number, unit: string) => {
+  if (unit === 'acre') {
+    const acres = Math.floor(quantity);
+    const gunthas = Math.round((quantity - acres) * 40);
+    return `${acres}.${gunthas.toString().padStart(2, '0')}`;
+  }
+  return quantity.toString();
+};
 
 interface User {
   id: number
@@ -32,6 +78,7 @@ interface Rental {
   acreage?: number
   pricePerUnit: number
   totalAmount: number
+  description?: string
   customer: { name: string; address: string; contactNumber: string }
   operator: { name: string }
   date: string
@@ -59,8 +106,8 @@ export default function Home() {
   const [selectedMachine, setSelectedMachine] = useState('')
   const [selectedUnit, setSelectedUnit] = useState('')
   const [quantity, setQuantity] = useState(1)
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
+  const [quantityText, setQuantityText] = useState('1')
+  const [timeSlots, setTimeSlots] = useState<{start: string, end: string}[]>([{start: '', end: ''}])
 
   const calculateHours = (start: string, end: string) => {
     if (!start || !end) return 0
@@ -70,9 +117,37 @@ export default function Home() {
     const diffHours = diffMs / (1000 * 60 * 60)
     return Math.max(0, diffHours)
   }
+
+  const calculateTotalHours = (slots: {start: string, end: string}[]) => {
+    return slots.reduce((total, slot) => total + calculateHours(slot.start, slot.end), 0)
+  }
+
+  const addTimeSlot = () => {
+    setTimeSlots([...timeSlots, {start: '', end: ''}])
+  }
+
+  const removeTimeSlot = (index: number) => {
+    const newSlots = timeSlots.filter((_, i) => i !== index)
+    setTimeSlots(newSlots.length === 0 ? [{start: '', end: ''}] : newSlots)
+  }
+
+  const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) => {
+    const newSlots = [...timeSlots]
+    newSlots[index][field] = value
+    setTimeSlots(newSlots)
+    const totalHours = calculateTotalHours(newSlots)
+    setQuantity(totalHours)
+  }
+
+  const setCurrentTime = (index: number, field: 'start' | 'end') => {
+    const now = new Date()
+    const timeString = now.toTimeString().slice(0, 5) // HH:MM format
+    updateTimeSlot(index, field, timeString)
+  }
   const [customerName, setCustomerName] = useState('')
   const [customerContact, setCustomerContact] = useState('')
   const [customerAddress, setCustomerAddress] = useState('')
+  const [description, setDescription] = useState('')
 
   const [dieselCost, setDieselCost] = useState('')
   const [maintenanceCost, setMaintenanceCost] = useState('')
@@ -115,6 +190,7 @@ export default function Home() {
     quantity: '',
     pricePerUnit: '',
     totalAmount: '',
+    description: '',
     customerName: '',
     customerContact: '',
     customerAddress: '',
@@ -122,6 +198,17 @@ export default function Home() {
     maintenanceCost: '',
     operatorSalary: ''
   })
+
+  // Auto-calculate total amount when quantity or price per unit changes
+  useEffect(() => {
+    const quantity = parseFloat(editRentalData.quantity) || 0
+    const pricePerUnit = parseFloat(editRentalData.pricePerUnit) || 0
+    const totalAmount = quantity * pricePerUnit
+    setEditRentalData(prev => ({
+      ...prev,
+      totalAmount: totalAmount.toString()
+    }))
+  }, [editRentalData.quantity, editRentalData.pricePerUnit, editRentalData.machineType, editRentalData.unitType])
   const [editExpenseData, setEditExpenseData] = useState({
     description: '',
     amount: '',
@@ -193,7 +280,29 @@ export default function Home() {
   }
 
   const saveExpense = async () => {
-    if (!expenseDescription || !expenseAmount || !user) return
+    if (!user) return
+
+    let finalDescription = expenseDescription
+    let finalAmount = expenseAmount
+
+    // If amount is empty, sum the category fields
+    if (!finalAmount) {
+      const diesel = parseFloat(expenseDieselCost) || 0
+      const maintenance = parseFloat(expenseMaintenanceCost) || 0
+      const salary = parseFloat(expenseOperatorSalary) || 0
+      finalAmount = (diesel + maintenance + salary).toString()
+    }
+
+    // If description is empty, generate one based on filled categories
+    if (!finalDescription) {
+      const categories = []
+      if (parseFloat(expenseDieselCost) > 0) categories.push('Diesel')
+      if (parseFloat(expenseMaintenanceCost) > 0) categories.push('Maintenance')
+      if (parseFloat(expenseOperatorSalary) > 0) categories.push('Operator Salary')
+      finalDescription = categories.length > 0 ? categories.join(', ') : 'Expense'
+    }
+
+    if (!finalDescription || !finalAmount) return
 
     setLoading(true)
     try {
@@ -201,8 +310,8 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          description: expenseDescription,
-          amount: expenseAmount,
+          description: finalDescription,
+          amount: finalAmount,
           operatorId: user.id,
           dieselCost: expenseDieselCost ? parseFloat(expenseDieselCost) : undefined,
           maintenanceCost: expenseMaintenanceCost ? parseFloat(expenseMaintenanceCost) : undefined,
@@ -245,6 +354,7 @@ export default function Home() {
           quantity,
           pricePerUnit,
           totalAmount,
+          description: description || undefined,
           customerName,
           customerContact,
           customerAddress,
@@ -261,8 +371,7 @@ export default function Home() {
         setSelectedMachine('')
         setSelectedUnit('')
         setQuantity(1)
-        setStartTime('')
-        setEndTime('')
+        setTimeSlots([{start: '', end: ''}])
         setCustomerName('')
         setCustomerContact('')
         setCustomerAddress('')
@@ -299,6 +408,7 @@ export default function Home() {
       quantity: rental.quantity.toString(),
       pricePerUnit: rental.pricePerUnit.toString(),
       totalAmount: rental.totalAmount.toString(),
+      description: rental.description || '',
       customerName: rental.customer.name,
       customerContact: rental.customer.contactNumber,
       customerAddress: rental.customer.address || '',
@@ -455,8 +565,11 @@ export default function Home() {
 
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
-  if (user.role === 'admin') {
-    return (
+  const totalRentalsAmount = filteredRentals.reduce((sum, rental) => sum + rental.totalAmount, 0)
+
+if (user.role === 'admin') {
+  return (
+    <>
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-6">
@@ -522,7 +635,18 @@ export default function Home() {
                 <div className="p-6 border-b">
                   <div className="flex justify-between items-center">
                     <h2 className="text-xl font-semibold">Recent Rentals</h2>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-center">
+                      <button
+                        onClick={() => {
+                          fetchRentals()
+                          fetchCustomers()
+                          fetchExpenses()
+                        }}
+                        className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                      >
+                        <RefreshCw size={16} />
+                        Refresh
+                      </button>
                       <input
                         type="date"
                         value={rentalFilter.dateFrom}
@@ -556,6 +680,7 @@ export default function Home() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -567,6 +692,7 @@ export default function Home() {
                         <tr key={rental.id}>
                           <td className="px-6 py-4 whitespace-nowrap capitalize">{rental.machineType}</td>
                           <td className="px-6 py-4 whitespace-nowrap">{rental.operator.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{rental.customer.name}</td>
                           <td className="px-6 py-4 whitespace-nowrap">{rental.quantity} {rental.unitType}</td>
                           <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(rental.totalAmount)}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -591,6 +717,16 @@ export default function Home() {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td colSpan={4} className="px-6 py-4 text-right font-semibold">Total Rentals:</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-green-600 font-bold text-lg">
+                          {formatCurrency(totalRentalsAmount)}
+                        </td>
+                        <td></td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
@@ -606,7 +742,18 @@ export default function Home() {
                     Total: {formatCurrency(totalExpenses)}
                   </div>
                 </div>
-                <div className="flex gap-4 flex-wrap">
+                <div className="flex gap-4 flex-wrap items-center">
+                  <button
+                    onClick={() => {
+                      fetchRentals()
+                      fetchCustomers()
+                      fetchExpenses()
+                    }}
+                    className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                  >
+                    <RefreshCw size={16} />
+                    Refresh
+                  </button>
                   <input
                     type="date"
                     value={expenseFilter.dateFrom}
@@ -702,8 +849,222 @@ export default function Home() {
           )}
         </div>
       </div>
-    )
-  }
+
+      {/* Edit Rental Modal */}
+      {editingRental && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Edit Rental</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Machine Type</label>
+                <select
+                  value={editRentalData.machineType}
+                  onChange={(e) => setEditRentalData({...editRentalData, machineType: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="tractor">Tractor</option>
+                  <option value="harvester">Harvester</option>
+                  <option value="excavator">Excavator</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Unit Type</label>
+                <select
+                  value={editRentalData.unitType}
+                  onChange={(e) => setEditRentalData({...editRentalData, unitType: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {MACHINES.find(m => m.id === editRentalData.machineType)?.units.map((unit) => (
+                    <option key={unit} value={unit}>{unit}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Quantity</label>
+                <input
+                  type="number"
+                  value={editRentalData.quantity}
+                  onChange={(e) => setEditRentalData({...editRentalData, quantity: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                  step="0.01"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Price Per Unit</label>
+                <input
+                  type="number"
+                  value={editRentalData.pricePerUnit}
+                  onChange={(e) => setEditRentalData({...editRentalData, pricePerUnit: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Total Amount</label>
+                <input
+                  type="number"
+                  value={editRentalData.totalAmount}
+                  onChange={(e) => setEditRentalData({...editRentalData, totalAmount: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Description</label>
+                <input
+                  type="text"
+                  value={editRentalData.description}
+                  onChange={(e) => setEditRentalData({...editRentalData, description: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="Optional description"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Name</label>
+                <input
+                  type="text"
+                  value={editRentalData.customerName}
+                  onChange={(e) => setEditRentalData({...editRentalData, customerName: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Contact</label>
+                <input
+                  type="text"
+                  value={editRentalData.customerContact}
+                  onChange={(e) => setEditRentalData({...editRentalData, customerContact: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Address</label>
+                <input
+                  type="text"
+                  value={editRentalData.customerAddress}
+                  onChange={(e) => setEditRentalData({...editRentalData, customerAddress: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Diesel Cost</label>
+                <input
+                  type="number"
+                  value={editRentalData.dieselCost}
+                  onChange={(e) => setEditRentalData({...editRentalData, dieselCost: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Maintenance Cost</label>
+                <input
+                  type="number"
+                  value={editRentalData.maintenanceCost}
+                  onChange={(e) => setEditRentalData({...editRentalData, maintenanceCost: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Operator Salary</label>
+                <input
+                  type="number"
+                  value={editRentalData.operatorSalary}
+                  onChange={(e) => setEditRentalData({...editRentalData, operatorSalary: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+            </div>
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={updateRental}
+                disabled={loading}
+                className="flex-1 bg-blue-500 text-white p-2 rounded-lg disabled:bg-gray-300"
+              >
+                {loading ? 'Updating...' : 'Update'}
+              </button>
+              <button
+                onClick={() => setEditingRental(null)}
+                className="flex-1 bg-gray-500 text-white p-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Expense Modal */}
+      {editingExpense && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Edit Expense</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Description</label>
+                <input
+                  type="text"
+                  value={editExpenseData.description}
+                  onChange={(e) => setEditExpenseData({...editExpenseData, description: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Amount</label>
+                <input
+                  type="number"
+                  value={editExpenseData.amount}
+                  onChange={(e) => setEditExpenseData({...editExpenseData, amount: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Diesel Cost</label>
+                <input
+                  type="number"
+                  value={editExpenseData.dieselCost}
+                  onChange={(e) => setEditExpenseData({...editExpenseData, dieselCost: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Maintenance Cost</label>
+                <input
+                  type="number"
+                  value={editExpenseData.maintenanceCost}
+                  onChange={(e) => setEditExpenseData({...editExpenseData, maintenanceCost: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Operator Salary</label>
+                <input
+                  type="number"
+                  value={editExpenseData.operatorSalary}
+                  onChange={(e) => setEditExpenseData({...editExpenseData, operatorSalary: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+            </div>
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={updateExpense}
+                disabled={loading}
+                className="flex-1 bg-blue-500 text-white p-2 rounded-lg disabled:bg-gray-300"
+              >
+                {loading ? 'Updating...' : 'Update'}
+              </button>
+              <button
+                onClick={() => setEditingExpense(null)}
+                className="flex-1 bg-gray-500 text-white p-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
 
   // Operator view
   return (
@@ -837,11 +1198,28 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Description */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Nature of Work / Description</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional description of the work"
+                className="w-full p-2 border rounded-lg"
+              />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {MACHINES.map((machine) => (
                 <button
                   key={machine.id}
-                  onClick={() => setSelectedMachine(machine.id)}
+                  onClick={() => {
+                    setSelectedMachine(machine.id);
+                    if (machine.id === 'harvester') {
+                      setSelectedUnit('acre');
+                    }
+                  }}
                   className={`p-4 rounded-lg border-2 transition-colors ${
                     selectedMachine === machine.id
                       ? 'border-blue-500 bg-blue-50'
@@ -906,7 +1284,11 @@ export default function Home() {
                                 value={prices[machine.id as keyof typeof prices][unit as keyof typeof prices[keyof typeof prices]]}
                                 onChange={(e) => {
                                   const newPrices = { ...prices }
-                                  newPrices[machine.id as keyof typeof prices][unit as keyof typeof prices[keyof typeof prices]] = parseInt(e.target.value) || 0
+                                  const newValue = parseInt(e.target.value) || 0
+                                  newPrices[machine.id as keyof typeof prices][unit as keyof typeof prices[keyof typeof prices]] = newValue
+                                  if (machine.id === 'harvester' && unit === 'acre') {
+                                    newPrices.harvester.guntha = Math.round(newValue / 40)
+                                  }
                                   setPrices(newPrices)
                                 }}
                                 className="w-full p-2 border rounded"
@@ -927,44 +1309,74 @@ export default function Home() {
                 <label className="block text-sm font-medium mb-2">
                   {selectedUnit === 'hourly' ? 'Time Selection' : 'Quantity'}
                 </label>
-                {selectedUnit === 'acre' ? (
+                {(selectedUnit === 'acre' || selectedUnit === 'guntha') ? (
                   <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter quantity (e.g., 1.45)"
+                    type="text"
+                    value={quantityText}
+                    onChange={(e) => {
+                      setQuantityText(e.target.value);
+                      const parsed = parseQuantity(e.target.value, selectedUnit);
+                      setQuantity(parsed);
+                    }}
+                    placeholder={`Enter quantity (e.g., 1.45 or 2 acre 35 guntha)`}
                     className="w-full p-2 border rounded-lg"
-                    min="0"
-                    step="0.01"
                   />
                 ) : selectedUnit === 'hourly' ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Start Time</label>
-                      <input
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => {
-                          setStartTime(e.target.value)
-                          const hours = calculateHours(e.target.value, endTime)
-                          setQuantity(hours)
-                        }}
-                        className="w-full p-2 border rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">End Time</label>
-                      <input
-                        type="time"
-                        value={endTime}
-                        onChange={(e) => {
-                          setEndTime(e.target.value)
-                          const hours = calculateHours(startTime, e.target.value)
-                          setQuantity(hours)
-                        }}
-                        className="w-full p-2 border rounded-lg"
-                      />
-                    </div>
+                  <div>
+                    {timeSlots.map((slot, index) => (
+                      <div key={index} className="flex items-end gap-2 mb-2">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium mb-1">Start Time</label>
+                          <div className="flex gap-1">
+                            <input
+                              type="time"
+                              value={slot.start}
+                              onChange={(e) => updateTimeSlot(index, 'start', e.target.value)}
+                              className="flex-1 p-2 border rounded-lg"
+                            />
+                            <button
+                              onClick={() => setCurrentTime(index, 'start')}
+                              className="bg-green-500 text-white px-2 py-2 rounded text-sm hover:bg-green-600"
+                              title="Set current time"
+                            >
+                              Now
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium mb-1">End Time</label>
+                          <div className="flex gap-1">
+                            <input
+                              type="time"
+                              value={slot.end}
+                              onChange={(e) => updateTimeSlot(index, 'end', e.target.value)}
+                              className="flex-1 p-2 border rounded-lg"
+                            />
+                            <button
+                              onClick={() => setCurrentTime(index, 'end')}
+                              className="bg-green-500 text-white px-2 py-2 rounded text-sm hover:bg-green-600"
+                              title="Set current time"
+                            >
+                              Now
+                            </button>
+                          </div>
+                        </div>
+                        {timeSlots.length > 1 && (
+                          <button
+                            onClick={() => removeTimeSlot(index)}
+                            className="bg-red-500 text-white px-3 py-2 rounded text-sm"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={addTimeSlot}
+                      className="bg-blue-500 text-white px-3 py-2 rounded text-sm mt-2"
+                    >
+                      Add Time Slot
+                    </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-4">
@@ -983,7 +1395,7 @@ export default function Home() {
                     </button>
                   </div>
                 )}
-                {selectedUnit === 'hourly' && startTime && endTime && (
+                {selectedUnit === 'hourly' && (
                   <p className="text-sm text-gray-600 mt-2">
                     Total Hours: {quantity.toFixed(2)}
                   </p>
@@ -1132,6 +1544,7 @@ export default function Home() {
                       <div>Location: {rental.customer.address || 'N/A'}</div>
                       <div>Date: {new Date(rental.date).toLocaleDateString()}</div>
                       <div>Quantity: {rental.quantity} {rental.unitType}</div>
+                      {(rental as any).description && <div>Description: {(rental as any).description}</div>}
                     </div>
                   </div>
                 ))}

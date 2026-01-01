@@ -36,11 +36,12 @@ model Customer {
 model Rental {
   id               Int      @id @default(autoincrement())
   machineType      String   // 'tractor', 'harvester', 'excavator'
-  unitType         String   // 'hourly', 'trip', 'acre'
+  unitType         String   // 'hourly', 'trip', 'acre', 'guntha'
   quantity         Float
   acreage          Float?   // For acre-based rentals, supports decimals
   pricePerUnit     Float
   totalAmount      Float
+  description      String?  // Nature of work
   customerId       Int
   customer         Customer @relation(fields: [customerId], references: [id])
   operatorId       Int
