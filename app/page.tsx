@@ -460,7 +460,6 @@ export default function Home() {
   }
 
   const startEditRental = (rental: Rental) => {
-    setEditingRental(rental)
     setEditRentalData({
       machineType: rental.machineType,
       unitType: rental.unitType,
@@ -475,9 +474,10 @@ export default function Home() {
       maintenanceCost: rental.maintenanceCost.toString(),
       operatorSalary: rental.operatorSalary.toString(),
       paidAmount: rental.paidAmount.toString(),
-      advanceAmount: rental.advanceAmount.toString(),
+      advanceAmount: (rental.advanceAmount || 0).toString(),
       paymentStatus: rental.paymentStatus
     })
+    setEditingRental(rental)
   }
 
   const updateRental = async () => {
@@ -1006,7 +1006,15 @@ if (user.role === 'admin') {
                   <input
                     type="text"
                     value={expenseDescription}
-                    onChange={(e) => setExpenseDescription(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setExpenseDescription(value);
+                      if (value.trim() !== '') {
+                        setExpenseDieselCost('');
+                        setExpenseMaintenanceCost('');
+                        setExpenseOperatorSalary('');
+                      }
+                    }}
                     placeholder="Enter expense description"
                     className="w-full p-2 border rounded-lg"
                   />
@@ -1032,6 +1040,7 @@ if (user.role === 'admin') {
                       placeholder="0"
                       className="w-full p-2 border rounded-lg"
                       min="0"
+                      disabled={expenseDescription.trim() !== ''}
                     />
                   </div>
                   <div>
@@ -1043,6 +1052,7 @@ if (user.role === 'admin') {
                       placeholder="0"
                       className="w-full p-2 border rounded-lg"
                       min="0"
+                      disabled={expenseDescription.trim() !== ''}
                     />
                   </div>
                   <div>
@@ -1054,6 +1064,7 @@ if (user.role === 'admin') {
                       placeholder="0"
                       className="w-full p-2 border rounded-lg"
                       min="0"
+                      disabled={expenseDescription.trim() !== ''}
                     />
                   </div>
                 </div>
@@ -1425,7 +1436,24 @@ if (user.role === 'admin') {
                 <input
                   type="number"
                   value={editRentalData.paidAmount}
-                  onChange={(e) => setEditRentalData({...editRentalData, paidAmount: e.target.value})}
+                  onChange={(e) => {
+                    const newPaidAmount = e.target.value;
+                    const paidAmountFloat = parseFloat(newPaidAmount) || 0;
+                    const totalAmountFloat = parseFloat(editRentalData.totalAmount) || 0;
+                    let newStatus = editRentalData.paymentStatus;
+                    if (paidAmountFloat >= totalAmountFloat) {
+                      newStatus = 'PAID';
+                    } else if (paidAmountFloat > 0 && editRentalData.paymentStatus !== 'PAID') {
+                      newStatus = 'PARTIALLY_PAID';
+                    } else if (paidAmountFloat === 0) {
+                      newStatus = 'UNPAID';
+                    }
+                    setEditRentalData({
+                      ...editRentalData,
+                      paidAmount: newPaidAmount,
+                      paymentStatus: newStatus
+                    });
+                  }}
                   className="w-full p-2 border rounded-lg"
                   step="0.01"
                 />
@@ -2144,7 +2172,15 @@ if (user.role === 'admin') {
                 <input
                   type="text"
                   value={expenseDescription}
-                  onChange={(e) => setExpenseDescription(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setExpenseDescription(value);
+                    if (value.trim() !== '') {
+                      setExpenseDieselCost('');
+                      setExpenseMaintenanceCost('');
+                      setExpenseOperatorSalary('');
+                    }
+                  }}
                   placeholder="Enter expense description"
                   className="w-full p-2 border rounded-lg"
                 />
@@ -2170,6 +2206,7 @@ if (user.role === 'admin') {
                     placeholder="0"
                     className="w-full p-2 border rounded-lg"
                     min="0"
+                    disabled={expenseDescription.trim() !== ''}
                   />
                 </div>
                 <div>
@@ -2181,6 +2218,7 @@ if (user.role === 'admin') {
                     placeholder="0"
                     className="w-full p-2 border rounded-lg"
                     min="0"
+                    disabled={expenseDescription.trim() !== ''}
                   />
                 </div>
                 <div>
@@ -2192,6 +2230,7 @@ if (user.role === 'admin') {
                     placeholder="0"
                     className="w-full p-2 border rounded-lg"
                     min="0"
+                    disabled={expenseDescription.trim() !== ''}
                   />
                 </div>
               </div>
@@ -2204,23 +2243,26 @@ if (user.role === 'admin') {
               </button>
             </div>
             <div className="mt-8">
-              <h3 className="text-lg font-semibold mb-4">All Expenses</h3>
+              <h3 className="text-lg font-semibold mb-4">Latest Expenses</h3>
               <div className="space-y-3">
                 {expenses.length === 0 ? (
                   <p className="text-gray-500">No expenses recorded yet.</p>
                 ) : (
-                  expenses.map((expense) => (
-                    <div key={expense.id} className="p-4 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium">{expense.description}</div>
-                        <div className="font-semibold text-red-600">{formatCurrency(expense.amount)}</div>
+                  expenses
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .slice(0, 3)
+                    .map((expense) => (
+                      <div key={expense.id} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="font-medium">{expense.description}</div>
+                          <div className="font-semibold text-red-600">{formatCurrency(expense.amount)}</div>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          <div>Operator: {expense.operator.name}</div>
+                          <div>Date: {new Date(expense.date).toLocaleDateString()}</div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600">
-                        <div>Operator: {expense.operator.name}</div>
-                        <div>Date: {new Date(expense.date).toLocaleDateString()}</div>
-                      </div>
-                    </div>
-                  ))
+                    ))
                 )}
               </div>
             </div>

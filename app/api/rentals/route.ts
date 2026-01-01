@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const total = parseFloat(totalAmount)
     let paymentStatus = 'UNPAID'
     if (paid > 0 && paid < total) {
-      paymentStatus = 'PAR_PAID'
+      paymentStatus = 'PARTIALLY_PAID'
     } else if (paid >= total) {
       paymentStatus = 'PAID'
     }
