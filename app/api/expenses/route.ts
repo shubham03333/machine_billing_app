@@ -7,7 +7,7 @@ export async function GET() {
       include: {
         operator: true
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'asc' }
     })
     return NextResponse.json(expenses)
   } catch (error) {

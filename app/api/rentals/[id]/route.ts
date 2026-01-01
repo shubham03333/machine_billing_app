@@ -25,7 +25,9 @@ export async function PUT(
       customerAddress,
       dieselCost,
       maintenanceCost,
-      operatorSalary
+      operatorSalary,
+      paidAmount,
+      paymentStatus
     } = body
 
     if (!machineType || !unitType || !quantity || !pricePerUnit || !totalAmount ||
@@ -63,7 +65,9 @@ export async function PUT(
         description: description || null,
         dieselCost: parseFloat(dieselCost || 0),
         maintenanceCost: parseFloat(maintenanceCost || 0),
-        operatorSalary: parseFloat(operatorSalary || 0)
+        operatorSalary: parseFloat(operatorSalary || 0),
+        paidAmount: parseFloat(paidAmount || 0),
+        paymentStatus: paymentStatus || 'UNPAID'
       },
       include: {
         operator: true,

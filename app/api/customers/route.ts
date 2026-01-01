@@ -37,3 +37,46 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { id, name, contactNumber, address } = await request.json()
+
+    if (!id || !name || !contactNumber) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const updatedCustomer = await prisma.customer.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        contactNumber,
+        address: address || null
+      }
+    })
+
+    return NextResponse.json(updatedCustomer)
+  } catch (error) {
+    console.error('Update customer error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { id } = await request.json()
+
+    if (!id) {
+      return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 })
+    }
+
+    await prisma.customer.delete({
+      where: { id: parseInt(id) }
+    })
+
+    return NextResponse.json({ message: 'Customer deleted successfully' })
+  } catch (error) {
+    console.error('Delete customer error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

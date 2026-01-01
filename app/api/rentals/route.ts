@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getDummyRentals, addDummyRental, dummyUsers, getDummyCustomers, addDummyCustomer, getDummyCustomerByName } from '@/lib/dummy-data'
+
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('Fetching rentals...')
     const rentals = await prisma.rental.findMany({
       include: {
         customer: true,
@@ -11,17 +12,22 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' }
     })
+    console.log('Rentals fetched successfully:', rentals.length)
 
     return NextResponse.json(rentals)
   } catch (error) {
     console.error('Get rentals error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error details:', error instanceof Error ? error.message : error)
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { machineType, unitType, quantity, acreage, pricePerUnit, totalAmount, description, customerName, customerContact, customerAddress, operatorId, date, dieselCost, maintenanceCost, operatorSalary } = await request.json()
+    const { machineType, unitType, quantity, acreage, pricePerUnit, totalAmount, description, customerName, customerContact, customerAddress, operatorId, date, dieselCost, maintenanceCost, operatorSalary, paidAmount } = await request.json()
 
     if (!machineType || !unitType || !quantity || !pricePerUnit || !totalAmount || !customerName || !customerContact || !operatorId || !date) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
@@ -48,6 +54,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const paid = parseFloat(paidAmount || 0)
+    const total = parseFloat(totalAmount)
+    let paymentStatus = 'UNPAID'
+    if (paid > 0 && paid < total) {
+      paymentStatus = 'PAR_PAID'
+    } else if (paid >= total) {
+      paymentStatus = 'PAID'
+    }
+
     const rental = await prisma.rental.create({
       data: {
         machineType,
@@ -55,7 +70,7 @@ export async function POST(request: NextRequest) {
         quantity: parseFloat(quantity),
         acreage: acreage ? parseFloat(acreage) : null,
         pricePerUnit: parseFloat(pricePerUnit),
-        totalAmount: parseFloat(totalAmount),
+        totalAmount: total,
         description: description || null,
         customerId: customer.id,
         operatorId: parseInt(operatorId),
@@ -63,6 +78,8 @@ export async function POST(request: NextRequest) {
         dieselCost: parseFloat(dieselCost || 0),
         maintenanceCost: parseFloat(maintenanceCost || 0),
         operatorSalary: parseFloat(operatorSalary || 0),
+        paidAmount: paid,
+        paymentStatus,
       },
       include: {
         customer: true,

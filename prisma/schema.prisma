@@ -50,6 +50,8 @@ model Rental {
   dieselCost       Float    @default(0)
   maintenanceCost  Float    @default(0)
   operatorSalary   Float    @default(0)
+  paidAmount       Float    @default(0)
+  paymentStatus    String   @default("UNPAID")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

@@ -1,18 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw } from 'lucide-react'
-import { DummyCustomer, getDummyCustomerByContact } from '@/lib/dummy-data'
+import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit } from 'lucide-react'
+
 
 const STANDARD_PRICES = {
   tractor: { hourly: 500, trip: 500, acre: 1500 },
   harvester: { hourly: 3000, trip: 3000, acre: 3000, guntha: 75 },
-  excavator: { hourly: 1000, trip: 200, acre: 400 }
+  excavator: { hourly: 1000, trip: 200, acre: 400, monthly: 0, work: 0 }
 }
 
 const MACHINES = [
   { id: 'harvester', name: 'Harvester', units: ['acre', 'guntha', 'hourly'] },
-  { id: 'excavator', name: 'Excavator', units: ['hourly', 'trip'] },
+  { id: 'excavator', name: 'JCB', units: ['hourly', 'trip', 'monthly', 'work'] },
   { id: 'tractor', name: 'Tractor', units: ['hourly', 'trip'] }
 ]
 
@@ -85,6 +85,9 @@ interface Rental {
   dieselCost: number
   maintenanceCost: number
   operatorSalary: number
+  paidAmount: number
+  paymentStatus: string
+  advanceAmount: number
   createdAt: string
 }
 
@@ -118,12 +121,16 @@ export default function Home() {
   const [selectedUnit, setSelectedUnit] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [quantityText, setQuantityText] = useState('1')
+  const [amount, setAmount] = useState('')
   const [timeSlots, setTimeSlots] = useState<{start: string, end: string}[]>([{start: '', end: ''}])
 
   const calculateHours = (start: string, end: string) => {
     if (!start || !end) return 0
     const startDate = new Date(`2000-01-01T${start}:00`)
-    const endDate = new Date(`2000-01-01T${end}:00`)
+    let endDate = new Date(`2000-01-01T${end}:00`)
+    if (endDate < startDate) {
+      endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000) // add 24 hours for overnight shifts
+    }
     const diffMs = endDate.getTime() - startDate.getTime()
     const diffHours = diffMs / (1000 * 60 * 60)
     return Math.max(0, diffHours)
@@ -139,7 +146,10 @@ export default function Home() {
 
   const removeTimeSlot = (index: number) => {
     const newSlots = timeSlots.filter((_, i) => i !== index)
-    setTimeSlots(newSlots.length === 0 ? [{start: '', end: ''}] : newSlots)
+    const finalSlots = newSlots.length === 0 ? [{start: '', end: ''}] : newSlots
+    setTimeSlots(finalSlots)
+    const totalHours = calculateTotalHours(finalSlots)
+    setQuantity(totalHours)
   }
 
   const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) => {
@@ -159,6 +169,7 @@ export default function Home() {
   const [customerContact, setCustomerContact] = useState('')
   const [customerAddress, setCustomerAddress] = useState('')
   const [description, setDescription] = useState('')
+  const [advanceAmount, setAdvanceAmount] = useState('')
 
   const [dieselCost, setDieselCost] = useState('')
   const [maintenanceCost, setMaintenanceCost] = useState('')
@@ -174,6 +185,7 @@ export default function Home() {
   const [expenseOperatorSalary, setExpenseOperatorSalary] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [mobileError, setMobileError] = useState('')
   const [filter, setFilter] = useState('today')
   const [prices, setPrices] = useState(STANDARD_PRICES)
   const [showEditRates, setShowEditRates] = useState(false)
@@ -191,11 +203,19 @@ export default function Home() {
   const [rentalFilter, setRentalFilter] = useState({
     dateFrom: '',
     dateTo: '',
-    machine: ''
+    machine: '',
+    paymentStatus: ''
   })
   const [editingRental, setEditingRental] = useState<Rental | null>(null)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [editCustomerData, setEditCustomerData] = useState({
+    name: '',
+    contactNumber: '',
+    address: ''
+  })
+  const [operatorRentalsPage, setOperatorRentalsPage] = useState(1)
   const [editRentalData, setEditRentalData] = useState({
     machineType: '',
     unitType: '',
@@ -208,7 +228,10 @@ export default function Home() {
     customerAddress: '',
     dieselCost: '',
     maintenanceCost: '',
-    operatorSalary: ''
+    operatorSalary: '',
+    paidAmount: '',
+    paymentStatus: '',
+    advanceAmount: ''
   })
 
   // Auto-calculate total amount when quantity or price per unit changes
@@ -229,6 +252,10 @@ export default function Home() {
     operatorSalary: ''
   })
 
+  const [overviewPage, setOverviewPage] = useState(1)
+  const [expensesPage, setExpensesPage] = useState(1)
+  const [customersPage, setCustomersPage] = useState(1)
+
   useEffect(() => {
     if (user) {
       fetchRentals()
@@ -236,6 +263,13 @@ export default function Home() {
       fetchExpenses()
     }
   }, [user])
+
+  useEffect(() => {
+    if (selectedUnit === 'monthly' || selectedUnit === 'work') {
+      setQuantity(1)
+      setAmount('')
+    }
+  }, [selectedUnit])
 
   const login = async () => {
     if (!pin) return
@@ -264,10 +298,14 @@ export default function Home() {
   const fetchRentals = async () => {
     try {
       const res = await fetch('/api/rentals')
+      if (!res.ok) {
+        throw new Error('Failed to fetch rentals')
+      }
       const data = await res.json()
-      setRentals(data)
+      setRentals(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error('Failed to fetch rentals')
+      setRentals([])
     }
   }
 
@@ -352,8 +390,15 @@ export default function Home() {
   const createRental = async () => {
     if (!selectedMachine || !selectedUnit || !user || !customerName || !customerContact || !customerAddress) return
 
-    const pricePerUnit = prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]]
-    const totalAmount = quantity * pricePerUnit
+    let pricePerUnit = prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]]
+    let totalAmount
+
+    if (selectedUnit === 'monthly' || selectedUnit === 'work') {
+      totalAmount = parseFloat(amount) || 0
+      pricePerUnit = totalAmount // Set price per unit to the amount for consistency
+    } else {
+      totalAmount = quantity * pricePerUnit
+    }
 
     setLoading(true)
     try {
@@ -373,6 +418,8 @@ export default function Home() {
           dieselCost: dieselCost ? parseFloat(dieselCost) : 0,
           maintenanceCost: maintenanceCost ? parseFloat(maintenanceCost) : 0,
           operatorSalary: operatorSalary ? parseFloat(operatorSalary) : 0,
+          paidAmount: advanceAmount ? parseFloat(advanceAmount) : 0,
+          paymentStatus: 'UNPAID',
           operatorId: user.id,
           date: new Date().toISOString()
         })
@@ -426,7 +473,10 @@ export default function Home() {
       customerAddress: rental.customer.address || '',
       dieselCost: rental.dieselCost.toString(),
       maintenanceCost: rental.maintenanceCost.toString(),
-      operatorSalary: rental.operatorSalary.toString()
+      operatorSalary: rental.operatorSalary.toString(),
+      paidAmount: rental.paidAmount.toString(),
+      advanceAmount: rental.advanceAmount.toString(),
+      paymentStatus: rental.paymentStatus
     })
   }
 
@@ -464,6 +514,40 @@ export default function Home() {
       maintenanceCost: (expense.maintenanceCost || 0).toString(),
       operatorSalary: (expense.operatorSalary || 0).toString()
     })
+  }
+
+  const startEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer)
+    setEditCustomerData({
+      name: customer.name,
+      contactNumber: customer.contactNumber,
+      address: customer.address || ''
+    })
+  }
+
+  const updateCustomer = async () => {
+    if (!editingCustomer) return
+
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/customers/${editingCustomer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editCustomerData)
+      })
+
+      if (res.ok) {
+        fetchCustomers()
+        setEditingCustomer(null)
+        setError('')
+      } else {
+        const data = await res.json()
+        setError(data.error)
+      }
+    } catch (err) {
+      setError('Failed to update customer')
+    }
+    setLoading(false)
   }
 
   const updateExpense = async () => {
@@ -509,6 +593,70 @@ export default function Home() {
     }).format(amount)
   }
 
+  const getPaymentStatusColor = (status: string) => {
+    switch (status) {
+      case 'UNPAID':
+        return 'text-red-600'
+      case 'PARTIALLY_PAID':
+        return 'text-yellow-600'
+      case 'PAID':
+        return 'text-green-600'
+      default:
+        return ''
+    }
+  }
+
+  const downloadCSV = (data: string[][], filename: string) => {
+    const csv = data.map(row => row.map(field => `"${field}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  const exportRentalsToCSV = () => {
+    const headers = ['Machine Type', 'Operator', 'Customer Name', 'Contact', 'Address', 'Quantity', 'Unit', 'Price Per Unit', 'Total Amount', 'Paid Amount', 'Payment Status', 'Date', 'Description', 'Diesel Cost', 'Maintenance Cost', 'Operator Salary'];
+    const csvData = filteredRentals.map(r => [
+      r.machineType,
+      r.operator.name,
+      r.customer.name,
+      r.customer.contactNumber,
+      r.customer.address || '',
+      r.quantity.toString(),
+      r.unitType,
+      r.pricePerUnit.toString(),
+      r.totalAmount.toString(),
+      r.paidAmount.toString(),
+      r.paymentStatus,
+      new Date(r.date).toLocaleDateString(),
+      r.description || '',
+      r.dieselCost.toString(),
+      r.maintenanceCost.toString(),
+      r.operatorSalary.toString()
+    ]);
+    downloadCSV([headers, ...csvData], 'rentals.csv');
+  }
+
+  const exportExpensesToCSV = () => {
+    const headers = ['Description', 'Category', 'Operator', 'Amount', 'Date', 'Diesel Cost', 'Maintenance Cost', 'Operator Salary'];
+    const csvData = filteredExpenses.map(e => [
+      e.description,
+      getExpenseCategory(e),
+      e.operator.name,
+      e.amount.toString(),
+      new Date(e.date).toLocaleDateString(),
+      (e.dieselCost || 0).toString(),
+      (e.maintenanceCost || 0).toString(),
+      (e.operatorSalary || 0).toString()
+    ]);
+    downloadCSV([headers, ...csvData], 'expenses.csv');
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -550,34 +698,46 @@ export default function Home() {
     return 'Other'
   }
 
-  const filteredExpenses = expenses.filter(expense => {
-    const expenseDate = new Date(expense.date)
-    const fromDate = expenseFilter.dateFrom ? new Date(expenseFilter.dateFrom) : null
-    const toDate = expenseFilter.dateTo ? new Date(expenseFilter.dateTo) : null
+  const filteredExpenses = (expenses || [])
+    .filter(expense => {
+      const expenseDate = new Date(expense.date)
+      const fromDate = expenseFilter.dateFrom ? new Date(expenseFilter.dateFrom) : null
+      const toDate = expenseFilter.dateTo ? new Date(expenseFilter.dateTo) : null
 
-    if (fromDate && expenseDate < fromDate) return false
-    if (toDate && expenseDate > toDate) return false
-    if (expenseFilter.category && getExpenseCategory(expense) !== expenseFilter.category) return false
-    if (expenseFilter.operator && expense.operator.name !== expenseFilter.operator) return false
+      if (fromDate && expenseDate < fromDate) return false
+      if (toDate && expenseDate > toDate) return false
+      if (expenseFilter.category && getExpenseCategory(expense) !== expenseFilter.category) return false
+      if (expenseFilter.operator && expense.operator.name !== expenseFilter.operator) return false
 
-    return true
-  })
+      return true
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-  const filteredRentals = rentals.filter(rental => {
-    const rentalDate = new Date(rental.date)
-    const fromDate = rentalFilter.dateFrom ? new Date(rentalFilter.dateFrom) : null
-    const toDate = rentalFilter.dateTo ? new Date(rentalFilter.dateTo) : null
+  const filteredRentals = (rentals || [])
+    .filter(rental => {
+      const rentalDate = new Date(rental.date)
+      const fromDate = rentalFilter.dateFrom ? new Date(rentalFilter.dateFrom) : null
+      const toDate = rentalFilter.dateTo ? new Date(rentalFilter.dateTo) : null
 
-    if (fromDate && rentalDate < fromDate) return false
-    if (toDate && rentalDate > toDate) return false
-    if (rentalFilter.machine && rental.machineType !== rentalFilter.machine) return false
+      if (fromDate && rentalDate < fromDate) return false
+      if (toDate && rentalDate > toDate) return false
+      if (rentalFilter.machine && rental.machineType !== rentalFilter.machine) return false
+      if (rentalFilter.paymentStatus && rental.paymentStatus !== rentalFilter.paymentStatus) return false
 
-    return true
-  })
+      return true
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   const totalRentalsAmount = filteredRentals.reduce((sum, rental) => sum + rental.totalAmount, 0)
+
+  const totalPaidAmount = filteredRentals.reduce((sum, rental) => sum + (rental.paidAmount || 0), 0)
+
+  const totalPendingAmount = filteredRentals.reduce((sum, rental) => {
+    if (rental.paymentStatus === 'PAID') return sum
+    return sum + (rental.totalAmount - (rental.paidAmount || 0))
+  }, 0)
 
 if (user.role === 'admin') {
   return (
@@ -604,6 +764,16 @@ if (user.role === 'admin') {
               }`}
             >
               Overview
+            </button>
+            <button
+              onClick={() => setAdminActiveTab('add-expense')}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                adminActiveTab === 'add-expense'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Add Expense
             </button>
             <button
               onClick={() => setAdminActiveTab('expenses')}
@@ -653,6 +823,21 @@ if (user.role === 'admin') {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-2">Total Paid Amount</h3>
+                  <p className="text-3xl font-bold text-green-600">
+                    {formatCurrency(totalPaidAmount)}
+                  </p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-2">Total Pending Amount</h3>
+                  <p className="text-3xl font-bold text-red-600">
+                    {formatCurrency(totalPendingAmount)}
+                  </p>
+                </div>
+              </div>
+
               <div className="bg-white rounded-lg shadow overflow-hidden">
                 <div className="p-6 border-b">
                   <div className="flex justify-between items-center">
@@ -668,6 +853,12 @@ if (user.role === 'admin') {
                       >
                         <RefreshCw size={16} />
                         Refresh
+                      </button>
+                      <button
+                        onClick={exportRentalsToCSV}
+                        className="flex items-center gap-2 px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                      >
+                        Export to CSV
                       </button>
                       <input
                         type="date"
@@ -693,46 +884,68 @@ if (user.role === 'admin') {
                         <option value="harvester">Harvester</option>
                         <option value="excavator">Excavator</option>
                       </select>
+                      <select
+                        value={rentalFilter.paymentStatus}
+                        onChange={(e) => setRentalFilter({...rentalFilter, paymentStatus: e.target.value})}
+                        className="px-3 py-1 border rounded text-sm"
+                      >
+                        <option value="">All Payment Status</option>
+                        <option value="UNPAID">Unpaid</option>
+                        <option value="PARTIALLY_PAID">Partially Paid</option>
+                        <option value="PAID">Paid</option>
+                      </select>
                     </div>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-max">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Paid Amount</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Payment Status</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Pending Amount</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredRentals.map((rental) => (
+                      {filteredRentals.slice((overviewPage - 1) * 10, overviewPage * 10).map((rental) => (
                         <tr key={rental.id}>
-                          <td className="px-6 py-4 whitespace-nowrap capitalize">{rental.machineType}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{rental.operator.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{rental.customer.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{rental.quantity} {rental.unitType}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(rental.totalAmount)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-2 py-2 whitespace-nowrap text-xs capitalize">{rental.machineType}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.operator.name}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs max-w-24 truncate" title={rental.customer.name}>{rental.customer.name}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.quantity} {rental.unitType}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs">{formatCurrency(rental.totalAmount)}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs">{formatCurrency(rental.paidAmount || 0)}</td>
+                          <td className={`px-2 py-2 whitespace-nowrap text-xs ${getPaymentStatusColor(rental.paymentStatus)}`}>{rental.paymentStatus}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs">
+                            {rental.paymentStatus === 'PAID' ? (
+                              <span className="text-green-600">{formatCurrency(0)}</span>
+                            ) : (
+                              <span className="text-red-600">{formatCurrency(rental.totalAmount - (rental.paidAmount || 0))}</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs">
                             {new Date(rental.date).toLocaleDateString()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex gap-2">
+                          <td className="px-2 py-2 whitespace-nowrap">
+                            <div className="flex gap-1">
                               <button
                                 onClick={() => startEditRental(rental)}
                                 className="text-blue-600 hover:text-blue-900"
                               >
-                                <BarChart3 size={16} />
+                                <Edit size={14} />
                               </button>
                               <button
                                 onClick={() => deleteRental(rental.id)}
                                 className="text-red-600 hover:text-red-900"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </td>
@@ -747,12 +960,136 @@ if (user.role === 'admin') {
                         </td>
                         <td></td>
                         <td></td>
+                        <td></td>
+                        <td></td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
+                {filteredRentals.length > 10 && (
+                  <div className="flex items-center justify-between px-6 py-3 bg-white border-t">
+                    <div className="text-sm text-gray-700">
+                      Showing {Math.min((overviewPage - 1) * 10 + 1, filteredRentals.length)} to {Math.min(overviewPage * 10, filteredRentals.length)} of {filteredRentals.length} rentals
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setOverviewPage(Math.max(1, overviewPage - 1))}
+                        disabled={overviewPage === 1}
+                        className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-700">
+                        Page {overviewPage} of {Math.ceil(filteredRentals.length / 10)}
+                      </span>
+                      <button
+                        onClick={() => setOverviewPage(Math.min(Math.ceil(filteredRentals.length / 10), overviewPage + 1))}
+                        disabled={overviewPage === Math.ceil(filteredRentals.length / 10)}
+                        className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
+
+          )}
+
+          {adminActiveTab === 'add-expense' && (
+            <div className="bg-white p-6 rounded-lg shadow mb-6">
+              <h2 className="text-xl font-semibold mb-4">Add Expense</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Description</label>
+                  <input
+                    type="text"
+                    value={expenseDescription}
+                    onChange={(e) => setExpenseDescription(e.target.value)}
+                    placeholder="Enter expense description"
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Amount</label>
+                  <input
+                    type="number"
+                    value={expenseAmount}
+                    onChange={(e) => setExpenseAmount(e.target.value)}
+                    placeholder="0"
+                    className="w-full p-2 border rounded-lg"
+                    min="0"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Diesel Cost (Optional)</label>
+                    <input
+                      type="number"
+                      value={expenseDieselCost}
+                      onChange={(e) => setExpenseDieselCost(e.target.value)}
+                      placeholder="0"
+                      className="w-full p-2 border rounded-lg"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Maintenance Cost (Optional)</label>
+                    <input
+                      type="number"
+                      value={expenseMaintenanceCost}
+                      onChange={(e) => setExpenseMaintenanceCost(e.target.value)}
+                      placeholder="0"
+                      className="w-full p-2 border rounded-lg"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Operator Salary (Optional)</label>
+                    <input
+                      type="number"
+                      value={expenseOperatorSalary}
+                      onChange={(e) => setExpenseOperatorSalary(e.target.value)}
+                      placeholder="0"
+                      className="w-full p-2 border rounded-lg"
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={saveExpense}
+                  disabled={loading || (!expenseDescription && !expenseAmount && !expenseDieselCost && !expenseMaintenanceCost && !expenseOperatorSalary)}
+                  className="w-full bg-green-500 text-white p-3 rounded-lg disabled:bg-gray-300"
+                >
+                  {loading ? 'Saving...' : 'Save Expense'}
+                </button>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-4">Latest Expenses</h3>
+                <div className="space-y-3">
+                  {expenses.length === 0 ? (
+                    <p className="text-gray-500">No expenses recorded yet.</p>
+                  ) : (
+                    expenses
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .slice(0, 3)
+                      .map((expense) => (
+                        <div key={expense.id} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="font-medium">{expense.description}</div>
+                            <div className="font-semibold text-red-600">{formatCurrency(expense.amount)}</div>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <div>Operator: {expense.operator.name}</div>
+                            <div>Date: {new Date(expense.date).toLocaleDateString()}</div>
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
           {adminActiveTab === 'expenses' && (
@@ -826,7 +1163,7 @@ if (user.role === 'admin') {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredExpenses.map((expense) => (
+                    {filteredExpenses.slice((expensesPage - 1) * 10, expensesPage * 10).map((expense) => (
                       <tr key={expense.id}>
                         <td className="px-6 py-4 whitespace-nowrap">{expense.description}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{getExpenseCategory(expense)}</td>
@@ -843,7 +1180,7 @@ if (user.role === 'admin') {
                               onClick={() => startEditExpense(expense)}
                               className="text-blue-600 hover:text-blue-900"
                             >
-                              <BarChart3 size={16} />
+                              <Edit size={16} />
                             </button>
                             <button
                               onClick={() => deleteExpense(expense.id)}
@@ -863,10 +1200,37 @@ if (user.role === 'admin') {
                         {formatCurrency(totalExpenses)}
                       </td>
                       <td></td>
+                      <td></td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
+              {filteredExpenses.length > 10 && (
+                <div className="flex items-center justify-between px-6 py-3 bg-white border-t">
+                  <div className="text-sm text-gray-700">
+                    Showing {Math.min((expensesPage - 1) * 10 + 1, filteredExpenses.length)} to {Math.min(expensesPage * 10, filteredExpenses.length)} of {filteredExpenses.length} expenses
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setExpensesPage(Math.max(1, expensesPage - 1))}
+                      disabled={expensesPage === 1}
+                      className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-700">
+                      Page {expensesPage} of {Math.ceil(filteredExpenses.length / 10)}
+                    </span>
+                    <button
+                      onClick={() => setExpensesPage(Math.min(Math.ceil(filteredExpenses.length / 10), expensesPage + 1))}
+                      disabled={expensesPage === Math.ceil(filteredExpenses.length / 10)}
+                      className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -888,35 +1252,73 @@ if (user.role === 'admin') {
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-hidden">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact Number</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Rentals</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Rental Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Address</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Total Revenue</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Total Rentals</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Last Rental Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {customers.map((customer) => (
+                    {customers.slice((customersPage - 1) * 10, customersPage * 10).map((customer) => (
                       <tr key={customer.id} onClick={() => setSelectedCustomer(customer)} className="cursor-pointer hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">{customer.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{customer.contactNumber}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{customer.address || 'N/A'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-green-600 font-semibold">
+                        <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">{customer.address || 'N/A'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-green-600 font-semibold hidden lg:table-cell">
                           {formatCurrency(customer.totalRevenue)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">{customer.totalRentals}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">{customer.totalRentals}</td>
+                        <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
                           {customer.lastRentalDate ? new Date(customer.lastRentalDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              startEditCustomer(customer)
+                            }}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <BarChart3 size={16} />
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {customers.length > 10 && (
+                  <div className="flex items-center justify-between px-6 py-3 bg-white border-t">
+                    <div className="text-sm text-gray-700">
+                      Showing {Math.min((customersPage - 1) * 10 + 1, customers.length)} to {Math.min(customersPage * 10, customers.length)} of {customers.length} customers
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setCustomersPage(Math.max(1, customersPage - 1))}
+                        disabled={customersPage === 1}
+                        className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-700">
+                        Page {customersPage} of {Math.ceil(customers.length / 10)}
+                      </span>
+                      <button
+                        onClick={() => setCustomersPage(Math.min(Math.ceil(customers.length / 10), customersPage + 1))}
+                        disabled={customersPage === Math.ceil(customers.length / 10)}
+                        className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -925,10 +1327,10 @@ if (user.role === 'admin') {
 
       {/* Edit Rental Modal */}
       {editingRental && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] flex flex-col">
             <h2 className="text-xl font-semibold mb-4">Edit Rental</h2>
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium mb-2">Machine Type</label>
                 <select
@@ -1019,31 +1421,26 @@ if (user.role === 'admin') {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Diesel Cost</label>
+                <label className="block text-sm font-medium mb-2">Paid Amount</label>
                 <input
                   type="number"
-                  value={editRentalData.dieselCost}
-                  onChange={(e) => setEditRentalData({...editRentalData, dieselCost: e.target.value})}
+                  value={editRentalData.paidAmount}
+                  onChange={(e) => setEditRentalData({...editRentalData, paidAmount: e.target.value})}
                   className="w-full p-2 border rounded-lg"
+                  step="0.01"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Maintenance Cost</label>
-                <input
-                  type="number"
-                  value={editRentalData.maintenanceCost}
-                  onChange={(e) => setEditRentalData({...editRentalData, maintenanceCost: e.target.value})}
+                <label className="block text-sm font-medium mb-2">Payment Status</label>
+                <select
+                  value={editRentalData.paymentStatus}
+                  onChange={(e) => setEditRentalData({...editRentalData, paymentStatus: e.target.value})}
                   className="w-full p-2 border rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Operator Salary</label>
-                <input
-                  type="number"
-                  value={editRentalData.operatorSalary}
-                  onChange={(e) => setEditRentalData({...editRentalData, operatorSalary: e.target.value})}
-                  className="w-full p-2 border rounded-lg"
-                />
+                >
+                  <option value="UNPAID">Unpaid</option>
+                  <option value="PARTIALLY_PAID">Partially Paid</option>
+                  <option value="PAID">Paid</option>
+                </select>
               </div>
             </div>
             <div className="flex gap-4 mt-6">
@@ -1127,6 +1524,59 @@ if (user.role === 'admin') {
               </button>
               <button
                 onClick={() => setEditingExpense(null)}
+                className="flex-1 bg-gray-500 text-white p-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer Modal */}
+      {editingCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Edit Customer</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Name</label>
+                <input
+                  type="text"
+                  value={editCustomerData.name}
+                  onChange={(e) => setEditCustomerData({...editCustomerData, name: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Contact Number</label>
+                <input
+                  type="text"
+                  value={editCustomerData.contactNumber}
+                  onChange={(e) => setEditCustomerData({...editCustomerData, contactNumber: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Address</label>
+                <input
+                  type="text"
+                  value={editCustomerData.address}
+                  onChange={(e) => setEditCustomerData({...editCustomerData, address: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+            </div>
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={updateCustomer}
+                disabled={loading}
+                className="flex-1 bg-blue-500 text-white p-2 rounded-lg disabled:bg-gray-300"
+              >
+                {loading ? 'Updating...' : 'Update'}
+              </button>
+              <button
+                onClick={() => setEditingCustomer(null)}
                 className="flex-1 bg-gray-500 text-white p-2 rounded-lg"
               >
                 Cancel
@@ -1271,7 +1721,8 @@ if (user.role === 'admin') {
         </div>
 
         {activeTab === 'new-rental' && (
-          <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <>
+            <div className="bg-white p-6 rounded-lg shadow mb-6">
             <h2 className="text-xl font-semibold mb-4">Add New Rental</h2>
 
             {/* Customer Selection */}
@@ -1327,18 +1778,24 @@ if (user.role === 'admin') {
                       onChange={(e) => {
                         const contact = e.target.value
                         setCustomerContact(contact)
-                        if (contact) {
-                          const customer = getDummyCustomerByContact(contact)
-                          if (customer) {
-                            setCustomerName(customer.name)
-                            setCustomerAddress(customer.address)
+                        if (contact && /^\d{10}$/.test(contact)) {
+                          setMobileError('')
+                          const existingCustomer = customers.find(c => c.contactNumber === contact)
+                          if (existingCustomer) {
+                            setCustomerName(existingCustomer.name)
+                            setCustomerAddress(existingCustomer.address || '')
                           }
+                        } else if (contact) {
+                          setMobileError('Mobile number must be exactly 10 digits.')
+                        } else {
+                          setMobileError('')
                         }
                       }}
                       placeholder="Enter contact number"
                       className="w-full p-2 border rounded-lg"
                       required
                     />
+                    {mobileError && <p className="text-red-500 text-sm mt-1">{mobileError}</p>}
                   </div>
                 </div>
                 <div>
@@ -1364,6 +1821,20 @@ if (user.role === 'admin') {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Optional description of the work"
                 className="w-full p-2 border rounded-lg"
+              />
+            </div>
+
+            {/* Advance Amount */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Advance Amount (Optional)</label>
+              <input
+                type="number"
+                value={advanceAmount}
+                onChange={(e) => setAdvanceAmount(e.target.value)}
+                placeholder="0"
+                className="w-full p-2 border rounded-lg"
+                min="0"
+                step="0.01"
               />
             </div>
 
@@ -1416,7 +1887,7 @@ if (user.role === 'admin') {
               </div>
             )}
 
-            {selectedMachine && (
+            {selectedMachine && selectedUnit && (selectedUnit !== 'monthly' && selectedUnit !== 'work') && (
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-medium">Edit Rates</h3>
@@ -1464,9 +1935,17 @@ if (user.role === 'admin') {
             {selectedUnit && (
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">
-                  {selectedUnit === 'hourly' ? 'Time Selection' : 'Quantity'}
+                  {selectedUnit === 'hourly' ? 'Time Selection' : (selectedUnit === 'monthly' || selectedUnit === 'work') ? 'Amount' : 'Quantity'}
                 </label>
-                {(selectedUnit === 'acre' || selectedUnit === 'guntha') ? (
+                {(selectedUnit === 'monthly' || selectedUnit === 'work') ? (
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="w-full p-2 border rounded-lg"
+                  />
+                ) : (selectedUnit === 'acre' || selectedUnit === 'guntha') ? (
                   <input
                     type="text"
                     value={quantityText}
@@ -1481,53 +1960,64 @@ if (user.role === 'admin') {
                 ) : selectedUnit === 'hourly' ? (
                   <div>
                     {timeSlots.map((slot, index) => (
-                      <div key={index} className="flex items-end gap-2 mb-2">
-                        <div className="flex-1">
-                          <label className="block text-sm font-medium mb-1">Start Time</label>
-                          <div className="flex gap-1">
-                            <input
-                              type="time"
-                              value={slot.start}
-                              onChange={(e) => updateTimeSlot(index, 'start', e.target.value)}
-                              className="flex-1 p-2 border rounded-lg"
-                            />
-                            <button
-                              onClick={() => setCurrentTime(index, 'start')}
-                              className="bg-green-500 text-white px-2 py-2 rounded text-sm hover:bg-green-600"
-                              title="Set current time"
-                            >
-                              Now
-                            </button>
+                      <div key={index} className="border rounded-lg p-3 mb-2 bg-gray-50">
+                        <div className="flex items-end gap-2 mb-2">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium mb-1">Start Time</label>
+                            <div className="flex gap-1">
+                              <input
+                                type="time"
+                                value={slot.start}
+                                onChange={(e) => updateTimeSlot(index, 'start', e.target.value)}
+                                className="flex-1 p-2 border rounded-lg"
+                              />
+                              <button
+                                onClick={() => setCurrentTime(index, 'start')}
+                                className="bg-green-500 text-white px-2 py-2 rounded text-sm hover:bg-green-600"
+                                title="Set current time"
+                              >
+                                Now
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex-1">
-                          <label className="block text-sm font-medium mb-1">End Time</label>
-                          <div className="flex gap-1">
-                            <input
-                              type="time"
-                              value={slot.end}
-                              onChange={(e) => updateTimeSlot(index, 'end', e.target.value)}
-                              className="flex-1 p-2 border rounded-lg"
-                            />
-                            <button
-                              onClick={() => setCurrentTime(index, 'end')}
-                              className="bg-green-500 text-white px-2 py-2 rounded text-sm hover:bg-green-600"
-                              title="Set current time"
-                            >
-                              Now
-                            </button>
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium mb-1">End Time</label>
+                            <div className="flex gap-1">
+                              <input
+                                type="time"
+                                value={slot.end}
+                                onChange={(e) => updateTimeSlot(index, 'end', e.target.value)}
+                                className="flex-1 p-2 border rounded-lg"
+                              />
+                              <button
+                                onClick={() => setCurrentTime(index, 'end')}
+                                className="bg-green-500 text-white px-2 py-2 rounded text-sm hover:bg-green-600"
+                                title="Set current time"
+                              >
+                                Now
+                              </button>
+                            </div>
                           </div>
+                          {timeSlots.length > 1 && (
+                            <button
+                              onClick={() => removeTimeSlot(index)}
+                              className="bg-red-500 text-white px-3 py-2 rounded text-sm"
+                            >
+                              Remove
+                            </button>
+                          )}
                         </div>
-                        {timeSlots.length > 1 && (
-                          <button
-                            onClick={() => removeTimeSlot(index)}
-                            className="bg-red-500 text-white px-3 py-2 rounded text-sm"
-                          >
-                            Remove
-                          </button>
-                        )}
+                        <div className="text-xl font-bold text-blue-800">
+                          {calculateHours(slot.start, slot.end).toFixed(2)} hrs
+                        </div>
                       </div>
                     ))}
+                    <div className="text-lg font-semibold text-center mt-4 p-2 bg-blue-50 rounded-lg">
+                      Total Hours: {quantity.toFixed(2)} hrs
+                    </div>
+                    <div className="text-lg font-semibold text-center mt-2 p-2 bg-green-50 rounded-lg">
+                      Total Amount: {formatCurrency(quantity * prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]])}
+                    </div>
                     <button
                       onClick={addTimeSlot}
                       className="bg-blue-500 text-white px-3 py-2 rounded text-sm mt-2"
@@ -1543,7 +2033,17 @@ if (user.role === 'admin') {
                     >
                       <Minus size={20} />
                     </button>
-                    <span className="text-2xl font-bold w-16 text-center">{quantity}</span>
+                    {selectedUnit === 'trip' ? (
+                      <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-16 p-2 border rounded-lg text-center text-2xl font-bold"
+                        min="1"
+                      />
+                    ) : (
+                      <span className="text-2xl font-bold w-16 text-center">{quantity}</span>
+                    )}
                     <button
                       onClick={() => setQuantity(quantity + 1)}
                       className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center"
@@ -1552,30 +2052,43 @@ if (user.role === 'admin') {
                     </button>
                   </div>
                 )}
-                {selectedUnit === 'hourly' && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Total Hours: {quantity.toFixed(2)}
-                  </p>
-                )}
+
               </div>
             )}
 
             {selectedMachine && selectedUnit && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span>Rate per {selectedUnit}:</span>
-                  <span className="font-semibold">
-                    {formatCurrency(prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]])}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mt-2">
-                  <span>Total Amount:</span>
-                  <span className="text-xl font-bold text-green-600">
-                    {formatCurrency(
-                      quantity * prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]]
-                    )}
-                  </span>
-                </div>
+                {selectedUnit !== 'monthly' && selectedUnit !== 'work' && (
+                  <div className="flex justify-between items-center">
+                    <span>Rate per {selectedUnit}:</span>
+                    <span className="font-semibold">
+                      {formatCurrency(prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]])}
+                    </span>
+                  </div>
+                )}
+                {selectedUnit === 'hourly' && (
+                  <div className="flex justify-between items-center">
+                    <span>Total Hours:</span>
+                    <span className="font-semibold">
+                      {quantity.toFixed(2)} hrs
+                    </span>
+                  </div>
+                )}
+                {(selectedUnit === 'monthly' || selectedUnit === 'work') ? (
+                  <div className="flex justify-between items-center mt-2">
+                    <span>Amount:</span>
+                    <span className="text-xl font-bold text-green-600">
+                      {formatCurrency(parseFloat(amount) || 0)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center mt-2">
+                    <span>Total Amount:</span>
+                    <span className="text-xl font-bold text-green-600">
+                      {formatCurrency(quantity * prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]])}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1589,6 +2102,37 @@ if (user.role === 'admin') {
 
             {error && <p className="text-red-500 mt-2">{error}</p>}
           </div>
+
+          {/* Recent Rentals */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-4">Your Last 3 Rentals</h3>
+            <div className="space-y-3">
+              {rentals
+                .filter(r => r.operator.name === user.name)
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .slice(0, 3)
+                .map((rental) => (
+                  <div key={rental.id} className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-medium capitalize">{rental.machineType}</div>
+                      <div className="font-semibold text-green-600">{formatCurrency(rental.totalAmount)}</div>
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div>Customer: {rental.customer.name} ({rental.customer.contactNumber})</div>
+                      <div>Location: {rental.customer.address || 'N/A'}</div>
+                      <div>Date: {new Date(rental.date).toLocaleDateString()}</div>
+                      <div>Quantity: {rental.quantity} {rental.unitType}</div>
+                      {rental.description && <div>Description: {rental.description}</div>}
+                    </div>
+                  </div>
+                ))}
+              {rentals.filter(r => r.operator.name === user.name).length === 0 && (
+                <p className="text-gray-500 text-center py-4">No rentals recorded yet.</p>
+              )}
+            </div>
+          </div>
+          </>
+
         )}
 
         {activeTab === 'expenses' && (
