@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit } from 'lucide-react'
+import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit, LogOut, Home as HomeIcon, FileText, Users, Phone, Fuel, Clock, User, Wrench, IndianRupee } from 'lucide-react'
 
 
 const STANDARD_PRICES = {
@@ -117,6 +117,19 @@ interface Customer {
 export default function Home() {
   const [pin, setPin] = useState('')
   const [user, setUser] = useState<User | null>(null)
+
+  // Load user from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch (error) {
+        console.error('Error parsing stored user:', error)
+        localStorage.removeItem('user')
+      }
+    }
+  }, [])
   const [selectedMachine, setSelectedMachine] = useState('')
   const [selectedUnit, setSelectedUnit] = useState('')
   const [quantity, setQuantity] = useState(1)
@@ -215,6 +228,7 @@ export default function Home() {
     contactNumber: '',
     address: ''
   })
+  const [editCustomerMobileError, setEditCustomerMobileError] = useState('')
   const [operatorRentalsPage, setOperatorRentalsPage] = useState(1)
   const [editRentalData, setEditRentalData] = useState({
     machineType: '',
@@ -282,13 +296,14 @@ export default function Home() {
         body: JSON.stringify({ pin })
       })
 
-      const data = await res.json()
-      if (res.ok) {
-        setUser(data)
-        setError('')
-      } else {
-        setError(data.error)
-      }
+    const data = await res.json()
+    if (res.ok) {
+      setUser(data)
+      localStorage.setItem('user', JSON.stringify(data))
+      setError('')
+    } else {
+      setError(data.error)
+    }
     } catch (err) {
       setError('Login failed')
     }
@@ -744,20 +759,22 @@ if (user.role === 'admin') {
     <>
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <div className="flex flex-col gap-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-center sm:text-left">Admin Dashboard</h1>
+          <div className="flex justify-center sm:justify-end">
             <button
               onClick={() => setUser(null)}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg"
+              className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm sm:text-base"
             >
               Logout
             </button>
           </div>
+        </div>
 
-          <div className="flex space-x-1 mb-6">
+          <div className="flex flex-wrap gap-1 mb-6">
             <button
               onClick={() => setAdminActiveTab('overview')}
-              className={`px-4 py-2 rounded-lg font-medium ${
+              className={`px-2 py-2 sm:px-4 rounded-lg font-medium text-sm sm:text-base ${
                 adminActiveTab === 'overview'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -767,7 +784,7 @@ if (user.role === 'admin') {
             </button>
             <button
               onClick={() => setAdminActiveTab('add-expense')}
-              className={`px-4 py-2 rounded-lg font-medium ${
+              className={`px-2 py-2 sm:px-4 rounded-lg font-medium text-sm sm:text-base ${
                 adminActiveTab === 'add-expense'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -777,7 +794,7 @@ if (user.role === 'admin') {
             </button>
             <button
               onClick={() => setAdminActiveTab('expenses')}
-              className={`px-4 py-2 rounded-lg font-medium ${
+              className={`px-2 py-2 sm:px-4 rounded-lg font-medium text-sm sm:text-base ${
                 adminActiveTab === 'expenses'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -787,7 +804,7 @@ if (user.role === 'admin') {
             </button>
             <button
               onClick={() => setAdminActiveTab('customers')}
-              className={`px-4 py-2 rounded-lg font-medium ${
+              className={`px-2 py-2 sm:px-4 rounded-lg font-medium text-sm sm:text-base ${
                 adminActiveTab === 'customers'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -842,42 +859,44 @@ if (user.role === 'admin') {
                 <div className="p-6 border-b">
                   <div className="flex justify-between items-center">
                     <h2 className="text-xl font-semibold">Recent Rentals</h2>
-                    <div className="flex gap-4 items-center">
+                    <div className="flex flex-wrap gap-2 items-center">
                       <button
                         onClick={() => {
                           fetchRentals()
                           fetchCustomers()
                           fetchExpenses()
                         }}
-                        className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                        className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 whitespace-nowrap"
                       >
                         <RefreshCw size={16} />
                         Refresh
                       </button>
                       <button
                         onClick={exportRentalsToCSV}
-                        className="flex items-center gap-2 px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                        className="flex items-center gap-2 px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 whitespace-nowrap"
                       >
                         Export to CSV
                       </button>
-                      <input
-                        type="date"
-                        value={rentalFilter.dateFrom}
-                        onChange={(e) => setRentalFilter({...rentalFilter, dateFrom: e.target.value})}
-                        className="px-3 py-1 border rounded text-sm"
-                        placeholder="From Date"
-                      />
-                      <input
-                        type="date"
-                        value={rentalFilter.dateTo}
-                        onChange={(e) => setRentalFilter({...rentalFilter, dateTo: e.target.value})}
-                        className="px-3 py-1 border rounded text-sm"
-                        placeholder="To Date"
-                      />
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <input
+                          type="date"
+                          value={rentalFilter.dateFrom}
+                          onChange={(e) => setRentalFilter({...rentalFilter, dateFrom: e.target.value})}
+                          className="px-3 py-1 border rounded text-sm min-w-0 flex-1 sm:flex-none"
+                          placeholder="From Date"
+                        />
+                        <input
+                          type="date"
+                          value={rentalFilter.dateTo}
+                          onChange={(e) => setRentalFilter({...rentalFilter, dateTo: e.target.value})}
+                          className="px-3 py-1 border rounded text-sm min-w-0 flex-1 sm:flex-none"
+                          placeholder="To Date"
+                        />
+                      </div>
                       <select
                         value={rentalFilter.machine}
                         onChange={(e) => setRentalFilter({...rentalFilter, machine: e.target.value})}
-                        className="px-3 py-1 border rounded text-sm"
+                        className="px-3 py-1 border rounded text-sm min-w-0 flex-1 sm:flex-none"
                       >
                         <option value="">All Machines</option>
                         <option value="tractor">Tractor</option>
@@ -887,7 +906,7 @@ if (user.role === 'admin') {
                       <select
                         value={rentalFilter.paymentStatus}
                         onChange={(e) => setRentalFilter({...rentalFilter, paymentStatus: e.target.value})}
-                        className="px-3 py-1 border rounded text-sm"
+                        className="px-3 py-1 border rounded text-sm min-w-0 flex-1 sm:flex-none"
                       >
                         <option value="">All Payment Status</option>
                         <option value="UNPAID">Unpaid</option>
@@ -906,9 +925,9 @@ if (user.role === 'admin') {
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Paid Amount</th>
-                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Payment Status</th>
-                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Pending Amount</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Paid Amount</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Payment Status</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pending Amount</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                       </tr>
@@ -1263,33 +1282,33 @@ if (user.role === 'admin') {
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-hidden">
-                <table className="w-full">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-max">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact Number</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Address</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Total Revenue</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Total Rentals</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Last Rental Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Rentals</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Rental Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {customers.slice((customersPage - 1) * 10, customersPage * 10).map((customer) => (
                       <tr key={customer.id} onClick={() => setSelectedCustomer(customer)} className="cursor-pointer hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">{customer.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{customer.contactNumber}</td>
-                        <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">{customer.address || 'N/A'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-green-600 font-semibold hidden lg:table-cell">
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap" title={customer.name}>{customer.name}</td>
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap" title={customer.contactNumber}>{customer.contactNumber}</td>
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap" title={customer.address || 'N/A'}>{customer.address || 'N/A'}</td>
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-green-600 font-semibold">
                           {formatCurrency(customer.totalRevenue)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">{customer.totalRentals}</td>
-                        <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap">{customer.totalRentals}</td>
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
                           {customer.lastRentalDate ? new Date(customer.lastRentalDate).toLocaleDateString() : 'N/A'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -1581,9 +1600,20 @@ if (user.role === 'admin') {
                 <input
                   type="text"
                   value={editCustomerData.contactNumber}
-                  onChange={(e) => setEditCustomerData({...editCustomerData, contactNumber: e.target.value})}
+                  onChange={(e) => {
+                    const contact = e.target.value
+                    setEditCustomerData({...editCustomerData, contactNumber: contact})
+                    if (contact && /^\d{10}$/.test(contact)) {
+                      setEditCustomerMobileError('')
+                    } else if (contact) {
+                      setEditCustomerMobileError('Mobile number must be exactly 10 digits.')
+                    } else {
+                      setEditCustomerMobileError('')
+                    }
+                  }}
                   className="w-full p-2 border rounded-lg"
                 />
+                {editCustomerMobileError && <p className="text-red-500 text-sm mt-1">{editCustomerMobileError}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Address</label>
@@ -1705,11 +1735,11 @@ if (user.role === 'admin') {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
           <h1 className="text-2xl font-bold">Welcome, {user.name}</h1>
           <button
             onClick={() => setUser(null)}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg"
+            className="bg-red-500 text-white px-3 py-2 sm:px-4 rounded-lg text-sm sm:text-base self-end sm:self-auto"
           >
             Logout
           </button>
@@ -1799,7 +1829,7 @@ if (user.role === 'admin') {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Contact Number</label>
+                    <label className="block text-sm font-medium mb-2 flex items-center gap-2"><Phone size={16} /> Contact Number</label>
                     <input
                       type="tel"
                       value={customerContact}
