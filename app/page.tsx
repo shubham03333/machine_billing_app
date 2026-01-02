@@ -70,6 +70,14 @@ interface User {
   role: string
 }
 
+interface Payment {
+  id: number
+  rentalId: number
+  amount: number
+  mode: string
+  date: string
+}
+
 interface Rental {
   id: number
   machineType: string
@@ -87,8 +95,10 @@ interface Rental {
   operatorSalary: number
   paidAmount: number
   paymentStatus: string
+  paymentMode?: string
   advanceAmount: number
   createdAt: string
+  payments: Payment[]
 }
 
 interface Expense {
@@ -183,6 +193,7 @@ export default function Home() {
   const [customerAddress, setCustomerAddress] = useState('')
   const [description, setDescription] = useState('')
   const [advanceAmount, setAdvanceAmount] = useState('')
+  const [paymentMode, setPaymentMode] = useState('Cash')
 
   const [dieselCost, setDieselCost] = useState('')
   const [maintenanceCost, setMaintenanceCost] = useState('')
@@ -223,6 +234,12 @@ export default function Home() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [selectedRental, setSelectedRental] = useState<Rental | null>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentRental, setPaymentRental] = useState<Rental | null>(null)
+  const [selectedRentalForBreakdown, setSelectedRentalForBreakdown] = useState<Rental | null>(null)
+  const [additionalAmount, setAdditionalAmount] = useState('')
+  const [additionalPaymentMode, setAdditionalPaymentMode] = useState('Cash')
   const [editCustomerData, setEditCustomerData] = useState({
     name: '',
     contactNumber: '',
@@ -245,8 +262,13 @@ export default function Home() {
     operatorSalary: '',
     paidAmount: '',
     paymentStatus: '',
-    advanceAmount: ''
+    advanceAmount: '',
+    paymentMode: '',
+    additionalAmount: '',
+    additionalPaymentMode: 'Cash'
   })
+  const [originalPaidAmount, setOriginalPaidAmount] = useState(0)
+  const [paidAmountError, setPaidAmountError] = useState('')
 
   // Auto-calculate total amount when quantity or price per unit changes
   useEffect(() => {
@@ -435,6 +457,7 @@ export default function Home() {
           operatorSalary: operatorSalary ? parseFloat(operatorSalary) : 0,
           paidAmount: advanceAmount ? parseFloat(advanceAmount) : 0,
           paymentStatus: 'UNPAID',
+          paymentMode: paymentMode || undefined,
           operatorId: user.id,
           date: new Date().toISOString()
         })
@@ -490,7 +513,10 @@ export default function Home() {
       operatorSalary: rental.operatorSalary.toString(),
       paidAmount: rental.paidAmount.toString(),
       advanceAmount: (rental.advanceAmount || 0).toString(),
-      paymentStatus: rental.paymentStatus
+      paymentStatus: rental.paymentStatus,
+      paymentMode: rental.paymentMode || '',
+      additionalAmount: '',
+      additionalPaymentMode: 'Cash'
     })
     setEditingRental(rental)
   }
@@ -599,6 +625,37 @@ export default function Home() {
     } catch (err) {
       console.error('Failed to delete expense')
     }
+  }
+
+  const addPayment = async () => {
+    if (!paymentRental || !additionalAmount || !additionalPaymentMode) return
+
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/rentals/${paymentRental.id}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: additionalAmount,
+          mode: additionalPaymentMode
+        })
+      })
+
+      if (res.ok) {
+        await fetchRentals()
+        setShowPaymentModal(false)
+        setPaymentRental(null)
+        setAdditionalAmount('')
+        setAdditionalPaymentMode('Cash')
+        setError('')
+      } else {
+        const data = await res.json()
+        setError(data.error)
+      }
+    } catch (err) {
+      setError('Failed to add payment')
+    }
+    setLoading(false)
   }
 
   const formatCurrency = (amount: number) => {
@@ -774,7 +831,7 @@ if (user.role === 'admin') {
           <div className="flex flex-wrap gap-1 mb-6">
             <button
               onClick={() => setAdminActiveTab('overview')}
-              className={`px-2 py-2 sm:px-4 rounded-lg font-medium text-sm sm:text-base ${
+              className={`px-1 py-1 sm:px-2 sm:py-2 md:px-4 rounded-lg font-medium text-xs sm:text-sm md:text-base ${
                 adminActiveTab === 'overview'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -784,7 +841,7 @@ if (user.role === 'admin') {
             </button>
             <button
               onClick={() => setAdminActiveTab('add-expense')}
-              className={`px-2 py-2 sm:px-4 rounded-lg font-medium text-sm sm:text-base ${
+              className={`px-1 py-1 sm:px-2 sm:py-2 md:px-4 rounded-lg font-medium text-xs sm:text-sm md:text-base ${
                 adminActiveTab === 'add-expense'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -794,7 +851,7 @@ if (user.role === 'admin') {
             </button>
             <button
               onClick={() => setAdminActiveTab('expenses')}
-              className={`px-2 py-2 sm:px-4 rounded-lg font-medium text-sm sm:text-base ${
+              className={`px-1 py-1 sm:px-2 sm:py-2 md:px-4 rounded-lg font-medium text-xs sm:text-sm md:text-base ${
                 adminActiveTab === 'expenses'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -804,7 +861,7 @@ if (user.role === 'admin') {
             </button>
             <button
               onClick={() => setAdminActiveTab('customers')}
-              className={`px-2 py-2 sm:px-4 rounded-lg font-medium text-sm sm:text-base ${
+              className={`px-1 py-1 sm:px-2 sm:py-2 md:px-4 rounded-lg font-medium text-xs sm:text-sm md:text-base ${
                 adminActiveTab === 'customers'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -920,6 +977,7 @@ if (user.role === 'admin') {
                 <table className="w-full min-w-max">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
@@ -928,13 +986,15 @@ if (user.role === 'admin') {
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Paid Amount</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Payment Status</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pending Amount</th>
-                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredRentals.slice((overviewPage - 1) * 10, overviewPage * 10).map((rental) => (
                         <tr key={rental.id}>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs">
+                            {new Date(rental.date).toLocaleDateString()}
+                          </td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs capitalize">{rental.machineType}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.operator.name}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs max-w-24 truncate" title={rental.customer.name}>{rental.customer.name}</td>
@@ -949,9 +1009,7 @@ if (user.role === 'admin') {
                               <span className="text-red-600">{formatCurrency(rental.totalAmount - (rental.paidAmount || 0))}</span>
                             )}
                           </td>
-                          <td className="px-2 py-2 whitespace-nowrap text-xs">
-                            {new Date(rental.date).toLocaleDateString()}
-                          </td>
+                          
                           <td className="px-2 py-2 whitespace-nowrap">
                             <div className="flex gap-1">
                               <button
@@ -959,6 +1017,18 @@ if (user.role === 'admin') {
                                 className="text-blue-600 hover:text-blue-900"
                               >
                                 <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => setPaymentRental(rental)}
+                                className="text-green-600 hover:text-green-900"
+                              >
+                                <IndianRupee size={14} />
+                              </button>
+                              <button
+                                onClick={() => setSelectedRentalForBreakdown(rental)}
+                                className="text-purple-600 hover:text-purple-900"
+                              >
+                                <BarChart3 size={14} />
                               </button>
                               <button
                                 onClick={() => deleteRental(rental.id)}
@@ -1477,7 +1547,43 @@ if (user.role === 'admin') {
                   step="0.01"
                 />
               </div>
+          
+              {/* <div>
+                <label className="block text-sm font-medium mb-2">Payment Mode</label>
+                <select
+                  value={editRentalData.paymentMode}
+                  onChange={(e) => setEditRentalData({...editRentalData, paymentMode: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Online">Online</option>
+                </select>
+              </div> */}
               <div>
+                <label className="block text-sm font-medium mb-2">Amount</label>
+                <input
+                  type="number"
+                  value={editRentalData.additionalAmount}
+                  onChange={(e) => setEditRentalData({...editRentalData, additionalAmount: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                  step="0.01"
+                  placeholder="Additional amount"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Payment Mode</label>
+                <select
+                  value={editRentalData.additionalPaymentMode}
+                  onChange={(e) => setEditRentalData({...editRentalData, additionalPaymentMode: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Online">Online</option>
+                </select>
+              </div>
+            </div>
+
+                <div>
                 <label className="block text-sm font-medium mb-2">Payment Status</label>
                 <select
                   value={editRentalData.paymentStatus}
@@ -1489,7 +1595,6 @@ if (user.role === 'admin') {
                   <option value="PAID">Paid</option>
                 </select>
               </div>
-            </div>
             <div className="flex gap-4 mt-6">
               <button
                 onClick={updateRental}
@@ -1727,6 +1832,111 @@ if (user.role === 'admin') {
           </div>
         </div>
       )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentRental && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Add Payment</h2>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  Customer: {paymentRental.customer.name}<br/>
+                  Total Amount: {formatCurrency(paymentRental.totalAmount)}<br/>
+                  Paid Amount: {formatCurrency(paymentRental.paidAmount)}<br/>
+                  Pending Amount: {formatCurrency(paymentRental.totalAmount - paymentRental.paidAmount)}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Payment Amount</label>
+                <input
+                  type="number"
+                  value={additionalAmount}
+                  onChange={(e) => setAdditionalAmount(e.target.value)}
+                  placeholder="Enter payment amount"
+                  className="w-full p-2 border rounded-lg"
+                  min="0"
+                  step="0.01"
+                  max={paymentRental.totalAmount - paymentRental.paidAmount}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Payment Mode</label>
+                <select
+                  value={additionalPaymentMode}
+                  onChange={(e) => setAdditionalPaymentMode(e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Online">Online</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="UPI">UPI</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={addPayment}
+                disabled={loading || !additionalAmount || parseFloat(additionalAmount) <= 0}
+                className="flex-1 bg-green-500 text-white p-2 rounded-lg disabled:bg-gray-300"
+              >
+                {loading ? 'Adding...' : 'Add Payment'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false)
+                  setPaymentRental(null)
+                  setAdditionalAmount('')
+                  setAdditionalPaymentMode('Cash')
+                }}
+                className="flex-1 bg-gray-500 text-white p-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rental Breakdown Modal */}
+      {selectedRentalForBreakdown && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Rental Cost Breakdown</h2>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span>Total Revenue:</span>
+                <span className="font-semibold text-green-600">{formatCurrency(selectedRentalForBreakdown.totalAmount)}</span>
+              </div>
+              {selectedRentalForBreakdown.payments && selectedRentalForBreakdown.payments.length > 0 && (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-2">Payment History</h3>
+                  <div className="space-y-2">
+                    {selectedRentalForBreakdown.payments.map((payment) => (
+                      <div key={payment.id} className="flex justify-between text-sm">
+                        <span>{new Date(payment.date).toLocaleDateString()} - {payment.mode}</span>
+                        <span className="font-semibold text-green-600">{formatCurrency(payment.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between font-semibold border-t pt-2">
+                      <span>Total Paid:</span>
+                      <span className="text-green-600">{formatCurrency(selectedRentalForBreakdown.payments.reduce((sum, p) => sum + p.amount, 0))}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={() => setSelectedRentalForBreakdown(null)}
+                className="flex-1 bg-gray-500 text-white p-2 rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -1896,6 +2106,21 @@ if (user.role === 'admin') {
               />
             </div>
 
+            {/* Payment Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Payment Mode</label>
+              <select
+                value={paymentMode}
+                onChange={(e) => setPaymentMode(e.target.value)}
+                className="w-full p-2 border rounded-lg"
+              >
+                <option value="Cash">Cash</option>
+                <option value="Online">Online</option>
+                <option value="Cheque">Cheque</option>
+                <option value="UPI">UPI</option>
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {MACHINES.map((machine) => (
                 <button
@@ -2021,47 +2246,47 @@ if (user.role === 'admin') {
                       <div key={index} className="border rounded-lg p-3 mb-2 bg-gray-50">
                         <div className="flex items-end gap-2 mb-2">
                           <div className="flex-1">
-                            <label className="block text-sm font-medium mb-1">Start Time</label>
-                            <div className="flex gap-1">
-                              <input
-                                type="time"
-                                value={slot.start}
-                                onChange={(e) => updateTimeSlot(index, 'start', e.target.value)}
-                                className="flex-1 p-2 border rounded-lg"
-                              />
+                            <div className="flex items-center gap-2 mb-1">
+                              <label className="block text-sm font-medium">Start Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'start')}
-                                className="bg-green-500 text-white px-2 py-2 rounded text-sm hover:bg-green-600"
+                                className="bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now
                               </button>
                             </div>
+                            <input
+                              type="time"
+                              value={slot.start}
+                              onChange={(e) => updateTimeSlot(index, 'start', e.target.value)}
+                              className="w-full p-2 border rounded-lg"
+                            />
                           </div>
                           <div className="flex-1">
-                            <label className="block text-sm font-medium mb-1">End Time</label>
-                            <div className="flex gap-1">
-                              <input
-                                type="time"
-                                value={slot.end}
-                                onChange={(e) => updateTimeSlot(index, 'end', e.target.value)}
-                                className="flex-1 p-2 border rounded-lg"
-                              />
+                            <div className="flex items-center gap-2 mb-1">
+                              <label className="block text-sm font-medium">End Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'end')}
-                                className="bg-green-500 text-white px-2 py-2 rounded text-sm hover:bg-green-600"
+                                className="bg-green-500 text-white px-1 py-1 rounded text-xs sm:px-2 sm:py-2 sm:text-sm hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now
                               </button>
                             </div>
+                            <input
+                              type="time"
+                              value={slot.end}
+                              onChange={(e) => updateTimeSlot(index, 'end', e.target.value)}
+                              className="w-full p-2 border rounded-lg"
+                            />
                           </div>
                           {timeSlots.length > 1 && (
                             <button
                               onClick={() => removeTimeSlot(index)}
                               className="bg-red-500 text-white px-3 py-2 rounded text-sm"
                             >
-                              Remove
+                              X
                             </button>
                           )}
                         </div>
