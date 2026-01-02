@@ -981,6 +981,7 @@ if (user.role === 'admin') {
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Paid Amount</th>
@@ -998,6 +999,7 @@ if (user.role === 'admin') {
                           <td className="px-2 py-2 whitespace-nowrap text-xs capitalize">{rental.machineType}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.operator.name}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs max-w-24 truncate" title={rental.customer.name}>{rental.customer.name}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.customer.contactNumber}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.quantity} {rental.unitType}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">{formatCurrency(rental.totalAmount)}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">{formatCurrency(rental.paidAmount || 0)}</td>
@@ -1043,10 +1045,11 @@ if (user.role === 'admin') {
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={4} className="px-6 py-4 text-right font-semibold">Total Rentals:</td>
+                        <td colSpan={5} className="px-6 py-4 text-right font-semibold">Total Rentals:</td>
                         <td className="px-6 py-4 whitespace-nowrap text-green-600 font-bold text-lg">
                           {formatCurrency(totalRentalsAmount)}
                         </td>
+                        <td></td>
                         <td></td>
                         <td></td>
                         <td></td>
