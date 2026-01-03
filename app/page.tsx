@@ -509,16 +509,16 @@ const fetchOperators = async () => {
       pricePerUnit = totalAmount // Set price per unit to the amount for consistency
     } else if (selectedMachine === 'excavator' && selectedUnit === 'hourly') {
       // JCB hourly work - calculate based on time slots
-      normalRate = parseFloat(normalHourlyRate) || 0
-      breakerRate = parseFloat(breakerHourlyRate) || 0
+      const normalRateValue = parseFloat(normalHourlyRate) || 0
+      const breakerRateValue = parseFloat(breakerHourlyRate) || 0
       timeSlotsData = timeSlots.map((slot) => ({
         startTime: slot.start,
         endTime: slot.end,
         isBreaker: slot.isBreaker,
-        calculatedAmount: calculateHours(slot.start, slot.end) * (slot.isBreaker ? breakerRate : normalRate)
+        calculatedAmount: calculateHours(slot.start, slot.end) * (slot.isBreaker ? breakerRateValue : normalRateValue)
       }))
       totalAmount = timeSlotsData.reduce((sum, slot) => sum + slot.calculatedAmount, 0)
-      pricePerUnit = normalRate
+      pricePerUnit = normalRateValue
     } else {
       totalAmount = quantity * pricePerUnit
     }
@@ -2937,9 +2937,9 @@ if (user.role === 'admin') {
                       <div>Date: {new Date(rental.date).toLocaleDateString()}</div>
                       {rental.machineType === 'excavator' && rental.unitType === 'hourly' ? (
                         <div>
-                          JCB: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.start, slot.end), 0).toFixed(2)} hr @ ₹{rental.normalHourlyRate}
+                          JCB: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0).toFixed(2)} hr @ ₹{rental.normalHourlyRate}
                           <br />
-                          Breaker: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.start, slot.end), 0).toFixed(2)} hr @ ₹{rental.breakerHourlyRate}
+                          Breaker: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0).toFixed(2)} hr @ ₹{rental.breakerHourlyRate}
                         </div>
                       ) : (
                         <div>Quantity: {rental.quantity} {rental.unitType}</div>
