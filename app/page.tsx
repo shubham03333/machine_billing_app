@@ -818,7 +818,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
           <div className="mt-6 text-sm text-gray-600">
             <p><strong>Test PINs:</strong></p>
             <p>Admin: 1234</p>
-            <p>Operator: 5678 or 9999</p>
+            <p>Operator: 3333 or 9999</p>
           </div>
         </div>
       </div>
@@ -2092,10 +2092,10 @@ if (user.role === 'admin') {
           </button>
         </div>
 
-        <div className="flex space-x-1 mb-6">
+        <div className="flex flex-wrap gap-1 mb-6">
           <button
             onClick={() => setActiveTab('new-rental')}
-            className={`px-4 py-2 rounded-lg font-medium ${
+            className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base ${
               activeTab === 'new-rental'
                 ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -2105,7 +2105,7 @@ if (user.role === 'admin') {
           </button>
           <button
             onClick={() => setActiveTab('expenses')}
-            className={`px-4 py-2 rounded-lg font-medium ${
+            className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base ${
               activeTab === 'expenses'
                 ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -2115,7 +2115,7 @@ if (user.role === 'admin') {
           </button>
           <button
             onClick={() => setActiveTab('rentals')}
-            className={`px-4 py-2 rounded-lg font-medium ${
+            className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base ${
               activeTab === 'rentals'
                 ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -2480,16 +2480,7 @@ if (user.role === 'admin') {
                 ) : selectedUnit === 'hourly' ? (
                   <div>
                     {timeSlots.map((slot, index) => (
-                      <div key={index} className="border rounded-lg p-3 mb-2 bg-gray-50 relative">
-                        {timeSlots.length > 1 && (
-                          <button
-                            onClick={() => removeTimeSlot(index)}
-                            className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
-                            title="Remove time slot"
-                          >
-                            ×
-                          </button>
-                        )}
+                      <div key={index} className="border rounded-lg p-3 mb-2 bg-gray-50">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
                           <div>
                             <div className="flex items-center justify-between mb-1">
@@ -2552,6 +2543,15 @@ if (user.role === 'admin') {
                           >
                             Breaker
                           </button>
+                          {timeSlots.length > 1 && (
+                            <button
+                              onClick={() => removeTimeSlot(index)}
+                              className="bg-red-500 text-white px-3 py-1 rounded text-sm font-medium hover:bg-red-600"
+                              title="Remove time slot"
+                            >
+                              ×
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
