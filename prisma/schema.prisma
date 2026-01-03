@@ -70,6 +70,7 @@ model Expense {
   date             DateTime
   operatorId       Int
   operator         User     @relation(fields: [operatorId], references: [id])
+  category         String?  // 'Diesel', 'Maintenance', 'Operator Salary', 'Driver Drink', 'Other'
   dieselCost       Float    @default(0)
   maintenanceCost  Float    @default(0)
   operatorSalary   Float    @default(0)

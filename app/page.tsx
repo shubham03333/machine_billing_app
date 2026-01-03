@@ -322,7 +322,8 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     dieselCost: '',
     maintenanceCost: '',
     operatorSalary: '',
-    date: ''
+    date: '',
+    operatorId: ''
   })
 
   const [overviewPage, setOverviewPage] = useState(1)
@@ -637,7 +638,9 @@ const fetchOperators = async () => {
       amount: expense.amount.toString(),
       dieselCost: (expense.dieselCost || 0).toString(),
       maintenanceCost: (expense.maintenanceCost || 0).toString(),
-      operatorSalary: (expense.operatorSalary || 0).toString()
+      operatorSalary: (expense.operatorSalary || 0).toString(),
+      date: new Date(expense.date).toISOString().split('T')[0],
+      operatorId: (expense as any).operatorId || ''
     })
   }
 
@@ -1823,6 +1826,28 @@ if (user.role === 'admin') {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium mb-2">Operator</label>
+                <select
+                  value={editExpenseData.operatorId}
+                  onChange={(e) => setEditExpenseData({...editExpenseData, operatorId: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Select Operator</option>
+                  {operators.map((operator) => (
+                    <option key={operator.id} value={operator.id}>{operator.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Date</label>
+                <input
+                  type="date"
+                  value={editExpenseData.date}
+                  onChange={(e) => setEditExpenseData({...editExpenseData, date: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-2">Diesel Cost</label>
                 <input
                   type="number"
@@ -2527,13 +2552,13 @@ if (user.role === 'admin') {
                   <div>
                     {timeSlots.map((slot, index) => (
                       <div key={index} className="border rounded-lg p-3 mb-2 bg-gray-50">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+                        <div className="space-y-4 mb-2">
                           <div>
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center justify-between mb-2">
                               <label className="block text-sm font-medium">Start Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'start')}
-                                className="bg-green-500 text-white px-4 py-3 sm:px-3 sm:py-2 rounded text-base sm:text-sm hover:bg-green-600"
+                                className="bg-green-500 text-white px-4 py-2 rounded text-sm hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now
@@ -2543,15 +2568,15 @@ if (user.role === 'admin') {
                               type="time"
                               value={slot.start}
                               onChange={(e) => updateTimeSlot(index, 'start', e.target.value)}
-                              className="w-full p-4 sm:p-3 border rounded-lg text-xl sm:text-lg"
+                              className="w-full p-4 border rounded-lg text-xl"
                             />
                           </div>
                           <div>
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center justify-between mb-2">
                               <label className="block text-sm font-medium">End Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'end')}
-                                className="bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600"
+                                className="bg-green-500 text-white px-4 py-2 rounded text-sm hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now
@@ -2561,7 +2586,7 @@ if (user.role === 'admin') {
                               type="time"
                               value={slot.end}
                               onChange={(e) => updateTimeSlot(index, 'end', e.target.value)}
-                              className="w-full p-4 sm:p-3 border rounded-lg text-xl sm:text-lg"
+                              className="w-full p-4 border rounded-lg text-xl"
                             />
                           </div>
                         </div>
