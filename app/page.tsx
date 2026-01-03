@@ -150,8 +150,8 @@ export default function Home() {
   const [quantityText, setQuantityText] = useState('1')
   const [amount, setAmount] = useState('')
   const [timeSlots, setTimeSlots] = useState<{start: string, end: string, isBreaker: boolean, calculatedAmount: number}[]>([{start: '', end: '', isBreaker: false, calculatedAmount: 0}])
-  const [normalHourlyRate, setNormalHourlyRate] = useState('')
-  const [breakerHourlyRate, setBreakerHourlyRate] = useState('')
+  const [normalHourlyRate, setNormalHourlyRate] = useState('1000')
+  const [breakerHourlyRate, setBreakerHourlyRate] = useState('1500')
 
   const calculateHours = (start: string, end: string) => {
     if (!start || !end) return 0
@@ -288,7 +288,12 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     paymentMode: '',
     additionalAmount: '',
     additionalPaymentMode: 'Cash',
-    date: ''
+    date: '',
+    normalHours: '',
+    breakerHours: '',
+    normalRate: '',
+    breakerRate: '',
+    timeSlots: [] as {start: string, end: string, isBreaker: boolean, calculatedAmount: number}[]
   })
   const [originalPaidAmount, setOriginalPaidAmount] = useState(0)
   const [paidAmountError, setPaidAmountError] = useState('')
@@ -539,6 +544,16 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   }
 
   const startEditRental = (rental: Rental) => {
+    let timeSlots = rental.timeSlots
+    if (typeof timeSlots === 'string') {
+      try {
+        timeSlots = JSON.parse(timeSlots)
+      } catch (e) {
+        timeSlots = []
+      }
+    }
+    const normalHours = timeSlots ? timeSlots.filter((s: any) => !s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.start, s.end), 0).toString() : '0'
+    const breakerHours = timeSlots ? timeSlots.filter((s: any) => s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.start, s.end), 0).toString() : '0'
     setEditRentalData({
       machineType: rental.machineType,
       unitType: rental.unitType,
@@ -558,7 +573,12 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
       paymentMode: rental.paymentMode || '',
       additionalAmount: '',
       additionalPaymentMode: 'Cash',
-      date: new Date(rental.date).toISOString().split('T')[0]
+      date: new Date(rental.date).toISOString().split('T')[0],
+      normalHours,
+      breakerHours,
+      normalRate: rental.normalHourlyRate ? rental.normalHourlyRate.toString() : '',
+      breakerRate: rental.breakerHourlyRate ? rental.breakerHourlyRate.toString() : '',
+      timeSlots: timeSlots ? timeSlots.map((slot: any) => ({ start: slot.startTime, end: slot.endTime, isBreaker: slot.isBreaker, calculatedAmount: slot.calculatedAmount })) : []
     })
     setEditingRental(rental)
   }
@@ -1518,6 +1538,55 @@ if (user.role === 'admin') {
                   step="0.01"
                 />
               </div>
+              {editRentalData.machineType === 'excavator' && editRentalData.unitType === 'hourly' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">JCB Hourly Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Normal Hours</label>
+                      <input
+                        type="number"
+                        value={editRentalData.normalHours}
+                        onChange={(e) => setEditRentalData({...editRentalData, normalHours: e.target.value})}
+                        className="w-full p-2 border rounded-lg"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Breaker Hours</label>
+                      <input
+                        type="number"
+                        value={editRentalData.breakerHours}
+                        onChange={(e) => setEditRentalData({...editRentalData, breakerHours: e.target.value})}
+                        className="w-full p-2 border rounded-lg"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Normal Rate</label>
+                      <input
+                        type="number"
+                        value={editRentalData.normalRate}
+                        onChange={(e) => setEditRentalData({...editRentalData, normalRate: e.target.value})}
+                        className="w-full p-2 border rounded-lg"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Breaker Rate</label>
+                      <input
+                        type="number"
+                        value={editRentalData.breakerRate}
+                        onChange={(e) => setEditRentalData({...editRentalData, breakerRate: e.target.value})}
+                        className="w-full p-2 border rounded-lg"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-2">Price Per Unit</label>
                 <input
@@ -1527,6 +1596,7 @@ if (user.role === 'admin') {
                   className="w-full p-2 border rounded-lg"
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Total Amount</label>
                 <input
@@ -1625,6 +1695,8 @@ if (user.role === 'admin') {
                   <option value="UPI">UPI</option>
                 </select>
               </div>
+
+              
               <div>
                 <label className="block text-sm font-medium mb-2">Amount</label>
                 <input
