@@ -332,6 +332,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
       fetchRentals()
       fetchCustomers()
       fetchExpenses()
+      fetchOperators()
     }
   }, [user])
 
@@ -391,15 +392,25 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     }
   }
 
-  const fetchExpenses = async () => {
-    try {
-      const res = await fetch('/api/expenses')
-      const data = await res.json()
-      setExpenses(data)
-    } catch (err) {
-      console.error('Failed to fetch expenses')
-    }
+const fetchExpenses = async () => {
+  try {
+    const res = await fetch('/api/expenses')
+    const data = await res.json()
+    setExpenses(data)
+  } catch (err) {
+    console.error('Failed to fetch expenses')
   }
+}
+
+const fetchOperators = async () => {
+  try {
+    const res = await fetch('/api/operators')
+    const data = await res.json()
+    setOperators(data)
+  } catch (err) {
+    console.error('Failed to fetch operators')
+  }
+}
 
   const saveExpense = async () => {
     if (!user) return
@@ -434,7 +445,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
         body: JSON.stringify({
           description: finalDescription,
           amount: finalAmount,
-          operatorId: user.id,
+          operatorId: selectedOperatorId || user.id,
           dieselCost: expenseDieselCost ? parseFloat(expenseDieselCost) : undefined,
           maintenanceCost: expenseMaintenanceCost ? parseFloat(expenseMaintenanceCost) : undefined,
           operatorSalary: expenseOperatorSalary ? parseFloat(expenseOperatorSalary) : undefined,
@@ -448,6 +459,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
         setExpenseDieselCost('')
         setExpenseMaintenanceCost('')
         setExpenseOperatorSalary('')
+        setSelectedOperatorId(null)
         setError('')
       } else {
         const data = await res.json()
@@ -508,7 +520,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
           paidAmount: advanceAmount ? parseFloat(advanceAmount) : 0,
           paymentStatus: 'UNPAID',
           paymentMode: paymentMode || undefined,
-          operatorId: user.id,
+          operatorId: selectedOperatorId || user.id,
           date: new Date(selectedDate).toISOString(),
           normalHourlyRate,
           breakerHourlyRate,
@@ -1199,6 +1211,21 @@ if (user.role === 'admin') {
                     min="0"
                   />
                 </div>
+                {user.role === 'admin' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Operator</label>
+                    <select
+                      value={selectedOperatorId || ''}
+                      onChange={(e) => setSelectedOperatorId(e.target.value ? parseInt(e.target.value) : null)}
+                      className="w-full p-2 border rounded-lg"
+                    >
+                      <option value="">Select Operator</option>
+                      {operators.map((op) => (
+                        <option key={op.id} value={op.id}>{op.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Diesel Cost (Optional)</label>
@@ -1239,7 +1266,7 @@ if (user.role === 'admin') {
                 </div>
                 <button
                   onClick={saveExpense}
-                  disabled={loading || (!expenseDescription && !expenseAmount && !expenseDieselCost && !expenseMaintenanceCost && !expenseOperatorSalary)}
+                  disabled={loading || (!expenseDescription && !expenseAmount && !expenseDieselCost && !expenseMaintenanceCost && !expenseOperatorSalary) || (user.role === 'admin' && !selectedOperatorId)}
                   className="w-full bg-green-500 text-white p-3 rounded-lg disabled:bg-gray-300"
                 >
                   {loading ? 'Saving...' : 'Save Expense'}
@@ -2734,6 +2761,19 @@ if (user.role === 'admin') {
                   min="0"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Operator</label>
+                <select
+                  value={selectedOperatorId || ''}
+                  onChange={(e) => setSelectedOperatorId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Select Operator</option>
+                  {operators.map((operator) => (
+                    <option key={operator.id} value={operator.id}>{operator.name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Diesel Cost (Optional)</label>
@@ -2774,7 +2814,7 @@ if (user.role === 'admin') {
               </div>
               <button
                 onClick={saveExpense}
-                disabled={loading || (!expenseDescription && !expenseAmount && !expenseDieselCost && !expenseMaintenanceCost && !expenseOperatorSalary)}
+                disabled={loading || (!selectedOperatorId) || (!expenseDescription && !expenseAmount && !expenseDieselCost && !expenseMaintenanceCost && !expenseOperatorSalary)}
                 className="w-full bg-green-500 text-white p-3 rounded-lg disabled:bg-gray-300"
               >
                 {loading ? 'Saving...' : 'Save Expense'}
