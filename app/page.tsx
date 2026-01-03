@@ -233,6 +233,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [selectedOperatorId, setSelectedOperatorId] = useState<number | null>(null)
   const [expenseDescription, setExpenseDescription] = useState('')
   const [expenseAmount, setExpenseAmount] = useState('')
+  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0])
   const [expenseDieselCost, setExpenseDieselCost] = useState('')
   const [expenseMaintenanceCost, setExpenseMaintenanceCost] = useState('')
   const [expenseOperatorSalary, setExpenseOperatorSalary] = useState('')
@@ -320,7 +321,8 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     amount: '',
     dieselCost: '',
     maintenanceCost: '',
-    operatorSalary: ''
+    operatorSalary: '',
+    date: ''
   })
 
   const [overviewPage, setOverviewPage] = useState(1)
@@ -446,6 +448,7 @@ const fetchOperators = async () => {
           description: finalDescription,
           amount: finalAmount,
           operatorId: selectedOperatorId || user.id,
+          date: expenseDate,
           dieselCost: expenseDieselCost ? parseFloat(expenseDieselCost) : undefined,
           maintenanceCost: expenseMaintenanceCost ? parseFloat(expenseMaintenanceCost) : undefined,
           operatorSalary: expenseOperatorSalary ? parseFloat(expenseOperatorSalary) : undefined,
@@ -521,7 +524,7 @@ const fetchOperators = async () => {
           paymentStatus: 'UNPAID',
           paymentMode: paymentMode || undefined,
           operatorId: selectedOperatorId || user.id,
-          date: new Date(selectedDate).toISOString(),
+          date: selectedDate,
           normalHourlyRate,
           breakerHourlyRate,
           timeSlots
@@ -1226,6 +1229,15 @@ if (user.role === 'admin') {
                     </select>
                   </div>
                 )}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={expenseDate}
+                    onChange={(e) => setExpenseDate(e.target.value)}
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Diesel Cost (Optional)</label>
@@ -2521,7 +2533,7 @@ if (user.role === 'admin') {
                               <label className="block text-sm font-medium">Start Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'start')}
-                                className="bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600"
+                                className="bg-green-500 text-white px-4 py-3 sm:px-3 sm:py-2 rounded text-base sm:text-sm hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now

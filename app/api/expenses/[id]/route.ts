@@ -18,7 +18,8 @@ export async function PUT(
       amount,
       dieselCost,
       maintenanceCost,
-      operatorSalary
+      operatorSalary,
+      date
     } = body
 
     if (!description || !amount) {
@@ -40,7 +41,8 @@ export async function PUT(
         amount: parseFloat(amount),
         dieselCost: dieselCost ? parseFloat(dieselCost) : undefined,
         maintenanceCost: maintenanceCost ? parseFloat(maintenanceCost) : undefined,
-        operatorSalary: operatorSalary ? parseFloat(operatorSalary) : undefined
+        operatorSalary: operatorSalary ? parseFloat(operatorSalary) : undefined,
+        date: date ? new Date(date) : undefined
       },
       include: {
         operator: true
