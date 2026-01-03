@@ -124,6 +124,20 @@ export async function PUT(
       })
     }
 
+    // Update the first payment's mode to match the rental's paymentMode
+    if (paymentMode) {
+      const firstPayment = await prisma.payment.findFirst({
+        where: { rentalId: id },
+        orderBy: { id: 'asc' }
+      })
+      if (firstPayment) {
+        await prisma.payment.update({
+          where: { id: firstPayment.id },
+          data: { mode: paymentMode }
+        })
+      }
+    }
+
     return NextResponse.json(updatedRental)
   } catch (error) {
     console.error('Update rental error:', error)
@@ -149,6 +163,11 @@ export async function DELETE(
     if (!rental) {
       return NextResponse.json({ error: 'Rental not found' }, { status: 404 })
     }
+
+    // Delete all payments associated with this rental first
+    await prisma.payment.deleteMany({
+      where: { rentalId: id }
+    })
 
     await prisma.rental.delete({
       where: { id }

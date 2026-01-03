@@ -1,7 +1,7 @@
 'use client'
-
 import { useState, useEffect } from 'react'
 import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit, LogOut, Home as HomeIcon, FileText, Users, Phone, Fuel, Clock, User, Wrench, IndianRupee } from 'lucide-react'
+import { StatsChart } from '../components/StatsChart'
 
 
 const STANDARD_PRICES = {
@@ -811,6 +811,8 @@ export default function Home() {
     return sum + (rental.totalAmount - (rental.paidAmount || 0))
   }, 0)
 
+  const totalQuantity = filteredRentals.reduce((sum, rental) => sum + rental.quantity, 0)
+
 if (user.role === 'admin') {
   return (
     <>
@@ -897,7 +899,7 @@ if (user.role === 'admin') {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2">Total Paid Amount</h3>
                   <p className="text-3xl font-bold text-green-600">
@@ -908,6 +910,12 @@ if (user.role === 'admin') {
                   <h3 className="text-lg font-semibold mb-2">Total Pending Amount</h3>
                   <p className="text-3xl font-bold text-red-600">
                     {formatCurrency(totalPendingAmount)}
+                  </p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-2">Total Quantity</h3>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {totalQuantity.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -1551,17 +1559,20 @@ if (user.role === 'admin') {
                 />
               </div>
           
-              {/* <div>
+              <div>
                 <label className="block text-sm font-medium mb-2">Payment Mode</label>
                 <select
                   value={editRentalData.paymentMode}
                   onChange={(e) => setEditRentalData({...editRentalData, paymentMode: e.target.value})}
                   className="w-full p-2 border rounded-lg"
                 >
+                  <option value="">Select Mode</option>
                   <option value="Cash">Cash</option>
                   <option value="Online">Online</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="UPI">UPI</option>
                 </select>
-              </div> */}
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Amount</label>
                 <input
@@ -1872,8 +1883,7 @@ if (user.role === 'admin') {
                 >
                   <option value="Cash">Cash</option>
                   <option value="Online">Online</option>
-                  <option value="Cheque">Cheque</option>
-                  <option value="UPI">UPI</option>
+                 
                 </select>
               </div>
             </div>
@@ -2119,8 +2129,6 @@ if (user.role === 'admin') {
               >
                 <option value="Cash">Cash</option>
                 <option value="Online">Online</option>
-                <option value="Cheque">Cheque</option>
-                <option value="UPI">UPI</option>
               </select>
             </div>
 
@@ -2246,14 +2254,23 @@ if (user.role === 'admin') {
                 ) : selectedUnit === 'hourly' ? (
                   <div>
                     {timeSlots.map((slot, index) => (
-                      <div key={index} className="border rounded-lg p-3 mb-2 bg-gray-50">
-                        <div className="flex items-end gap-2 mb-2">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                      <div key={index} className="border rounded-lg p-3 mb-2 bg-gray-50 relative">
+                        {timeSlots.length > 1 && (
+                          <button
+                            onClick={() => removeTimeSlot(index)}
+                            className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+                            title="Remove time slot"
+                          >
+                            ×
+                          </button>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
                               <label className="block text-sm font-medium">Start Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'start')}
-                                className="bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600"
+                                className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now
@@ -2266,12 +2283,12 @@ if (user.role === 'admin') {
                               className="w-full p-2 border rounded-lg"
                             />
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
                               <label className="block text-sm font-medium">End Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'end')}
-                                className="bg-green-500 text-white px-1 py-1 rounded text-xs sm:px-2 sm:py-2 sm:text-sm hover:bg-green-600"
+                                className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now
@@ -2284,16 +2301,8 @@ if (user.role === 'admin') {
                               className="w-full p-2 border rounded-lg"
                             />
                           </div>
-                          {timeSlots.length > 1 && (
-                            <button
-                              onClick={() => removeTimeSlot(index)}
-                              className="bg-red-500 text-white px-3 py-2 rounded text-sm"
-                            >
-                              X
-                            </button>
-                          )}
                         </div>
-                        <div className="text-xl font-bold text-blue-800">
+                        <div className="text-lg sm:text-xl font-bold text-blue-800 text-center">
                           {calculateHours(slot.start, slot.end).toFixed(2)} hrs
                         </div>
                       </div>
