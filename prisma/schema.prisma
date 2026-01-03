@@ -53,6 +53,10 @@ model Rental {
   paidAmount       Float    @default(0)
   paymentStatus    String   @default("UNPAID")
   paymentMode      String?  // 'Cash', 'Online', 'Cheque', 'UPI'
+  // JCB hourly specific fields
+  normalHourlyRate Float?  // For JCB excavator hourly work
+  breakerHourlyRate Float? // For JCB excavator breaker work
+  timeSlots        Json?   // Array of {startTime: string, endTime: string, isBreaker: boolean, calculatedAmount: number}
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

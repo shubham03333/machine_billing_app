@@ -13,9 +13,16 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' }
     })
-    console.log('Rentals fetched successfully:', rentals.length)
 
-    return NextResponse.json(rentals)
+    // Parse timeSlots if they are stored as JSON strings
+    const parsedRentals = rentals.map(rental => ({
+      ...rental,
+      timeSlots: rental.timeSlots ? (typeof rental.timeSlots === 'string' ? JSON.parse(rental.timeSlots) : rental.timeSlots) : null
+    }))
+
+    console.log('Rentals fetched successfully:', parsedRentals.length)
+
+    return NextResponse.json(parsedRentals)
   } catch (error) {
     console.error('Get rentals error:', error)
     console.error('Error details:', error instanceof Error ? error.message : error)
@@ -28,7 +35,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { machineType, unitType, quantity, acreage, pricePerUnit, totalAmount, description, customerName, customerContact, customerAddress, operatorId, date, dieselCost, maintenanceCost, operatorSalary, paidAmount, paymentMode } = await request.json()
+    const { machineType, unitType, quantity, acreage, pricePerUnit, totalAmount, description, customerName, customerContact, customerAddress, operatorId, date, dieselCost, maintenanceCost, operatorSalary, paidAmount, paymentMode, normalHourlyRate, breakerHourlyRate, timeSlots } = await request.json()
 
     if (!machineType || !unitType || !quantity || !pricePerUnit || !totalAmount || !customerName || !customerContact || !operatorId || !date) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
@@ -82,6 +89,9 @@ export async function POST(request: NextRequest) {
         paidAmount: paid,
         paymentStatus,
         paymentMode: paymentMode || null,
+        normalHourlyRate: normalHourlyRate ? parseFloat(normalHourlyRate) : null,
+        breakerHourlyRate: breakerHourlyRate ? parseFloat(breakerHourlyRate) : null,
+        timeSlots: timeSlots || null,
       },
       include: {
         customer: true,

@@ -12,6 +12,9 @@
 - [x] Update updateRental function to handle paymentMode
 - [x] Add popup on rental row click showing payment breakdown (total, paid by mode)
 
+## Bug Fixes
+- [x] Fix rental date display issue: Use selected date instead of creation date in admin panel recent rentals table
+
 ## Mobile-Friendly Improvements
 - [ ] Improve time selection mobile responsiveness
 - [ ] Enhance admin dashboard mobile layout

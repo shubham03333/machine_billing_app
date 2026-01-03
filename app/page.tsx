@@ -1,4 +1,4 @@
-'use client'
+"use client"
 import { useState, useEffect } from 'react'
 import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit, LogOut, Home as HomeIcon, FileText, Users, Phone, Fuel, Clock, User, Wrench, IndianRupee } from 'lucide-react'
 import { StatsChart } from '../components/StatsChart'
@@ -99,6 +99,10 @@ interface Rental {
   advanceAmount: number
   createdAt: string
   payments: Payment[]
+  // JCB hourly specific fields
+  normalHourlyRate?: number
+  breakerHourlyRate?: number
+  timeSlots?: Array<{ startTime: string; endTime: string; isBreaker: boolean; calculatedAmount: number }>
 }
 
 interface Expense {
@@ -145,7 +149,9 @@ export default function Home() {
   const [quantity, setQuantity] = useState(1)
   const [quantityText, setQuantityText] = useState('1')
   const [amount, setAmount] = useState('')
-  const [timeSlots, setTimeSlots] = useState<{start: string, end: string}[]>([{start: '', end: ''}])
+  const [timeSlots, setTimeSlots] = useState<{start: string, end: string, isBreaker: boolean, calculatedAmount: number}[]>([{start: '', end: '', isBreaker: false, calculatedAmount: 0}])
+  const [normalHourlyRate, setNormalHourlyRate] = useState('')
+  const [breakerHourlyRate, setBreakerHourlyRate] = useState('')
 
   const calculateHours = (start: string, end: string) => {
     if (!start || !end) return 0
@@ -164,23 +170,38 @@ export default function Home() {
   }
 
   const addTimeSlot = () => {
-    setTimeSlots([...timeSlots, {start: '', end: ''}])
+    setTimeSlots([...timeSlots, {start: '', end: '', isBreaker: false, calculatedAmount: 0}])
   }
 
   const removeTimeSlot = (index: number) => {
     const newSlots = timeSlots.filter((_, i) => i !== index)
-    const finalSlots = newSlots.length === 0 ? [{start: '', end: ''}] : newSlots
+    const finalSlots = newSlots.length === 0 ? [{start: '', end: '', isBreaker: false, calculatedAmount: 0}] : newSlots
     setTimeSlots(finalSlots)
     const totalHours = calculateTotalHours(finalSlots)
     setQuantity(totalHours)
   }
 
-  const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) => {
+const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) => {
+  if (index < 0 || index >= timeSlots.length) return
+  const newSlots = [...timeSlots]
+  newSlots[index][field] = value
+  // Recalculate amount for this slot
+  const hours = calculateHours(newSlots[index].start, newSlots[index].end)
+  const rate = newSlots[index].isBreaker ? (parseFloat(breakerHourlyRate) || 0) : (parseFloat(normalHourlyRate) || 0)
+  newSlots[index].calculatedAmount = hours * rate
+  setTimeSlots(newSlots)
+  const totalHours = calculateTotalHours(newSlots)
+  setQuantity(totalHours)
+}
+
+  const updateTimeSlotType = (index: number, isBreaker: boolean) => {
     const newSlots = [...timeSlots]
-    newSlots[index][field] = value
+    newSlots[index].isBreaker = isBreaker
+    // Recalculate amount for this slot
+    const hours = calculateHours(newSlots[index].start, newSlots[index].end)
+    const rate = isBreaker ? (parseFloat(breakerHourlyRate) || 0) : (parseFloat(normalHourlyRate) || 0)
+    newSlots[index].calculatedAmount = hours * rate
     setTimeSlots(newSlots)
-    const totalHours = calculateTotalHours(newSlots)
-    setQuantity(totalHours)
   }
 
   const setCurrentTime = (index: number, field: 'start' | 'end') => {
@@ -194,6 +215,7 @@ export default function Home() {
   const [description, setDescription] = useState('')
   const [advanceAmount, setAdvanceAmount] = useState('')
   const [paymentMode, setPaymentMode] = useState('Cash')
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
   const [dieselCost, setDieselCost] = useState('')
   const [maintenanceCost, setMaintenanceCost] = useState('')
@@ -265,7 +287,8 @@ export default function Home() {
     advanceAmount: '',
     paymentMode: '',
     additionalAmount: '',
-    additionalPaymentMode: 'Cash'
+    additionalPaymentMode: 'Cash',
+    date: ''
   })
   const [originalPaidAmount, setOriginalPaidAmount] = useState(0)
   const [paidAmountError, setPaidAmountError] = useState('')
@@ -428,11 +451,26 @@ export default function Home() {
     if (!selectedMachine || !selectedUnit || !user || !customerName || !customerContact || !customerAddress) return
 
     let pricePerUnit = prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]]
-    let totalAmount
+    let totalAmount: number
+    let normalRate: number | undefined
+    let breakerRate: number | undefined
+    let timeSlotsData: { startTime: string; endTime: string; isBreaker: boolean; calculatedAmount: number }[] | undefined
 
     if (selectedUnit === 'monthly' || selectedUnit === 'work') {
       totalAmount = parseFloat(amount) || 0
       pricePerUnit = totalAmount // Set price per unit to the amount for consistency
+    } else if (selectedMachine === 'excavator' && selectedUnit === 'hourly') {
+      // JCB hourly work - calculate based on time slots
+      normalRate = parseFloat(normalHourlyRate) || 0
+      breakerRate = parseFloat(breakerHourlyRate) || 0
+      timeSlotsData = timeSlots.map((slot) => ({
+        startTime: slot.start,
+        endTime: slot.end,
+        isBreaker: slot.isBreaker,
+        calculatedAmount: calculateHours(slot.start, slot.end) * (slot.isBreaker ? breakerRate : normalRate)
+      }))
+      totalAmount = timeSlotsData.reduce((sum, slot) => sum + slot.calculatedAmount, 0)
+      pricePerUnit = normalRate
     } else {
       totalAmount = quantity * pricePerUnit
     }
@@ -455,11 +493,14 @@ export default function Home() {
           dieselCost: dieselCost ? parseFloat(dieselCost) : 0,
           maintenanceCost: maintenanceCost ? parseFloat(maintenanceCost) : 0,
           operatorSalary: operatorSalary ? parseFloat(operatorSalary) : 0,
-          paidAmount: advanceAmount ? parseFloat(advanceAmount) : 0,
+          paidAmount: selectedMachine === 'excavator' && selectedUnit === 'hourly' ? 0 : (advanceAmount ? parseFloat(advanceAmount) : 0),
           paymentStatus: 'UNPAID',
           paymentMode: paymentMode || undefined,
           operatorId: user.id,
-          date: new Date().toISOString()
+          date: new Date(selectedDate).toISOString(),
+          normalHourlyRate,
+          breakerHourlyRate,
+          timeSlots
         })
       })
 
@@ -468,7 +509,7 @@ export default function Home() {
         setSelectedMachine('')
         setSelectedUnit('')
         setQuantity(1)
-        setTimeSlots([{start: '', end: ''}])
+        setTimeSlots([{start: '', end: '', isBreaker: false, calculatedAmount: 0}])
         setCustomerName('')
         setCustomerContact('')
         setCustomerAddress('')
@@ -516,7 +557,8 @@ export default function Home() {
       paymentStatus: rental.paymentStatus,
       paymentMode: rental.paymentMode || '',
       additionalAmount: '',
-      additionalPaymentMode: 'Cash'
+      additionalPaymentMode: 'Cash',
+      date: new Date(rental.date).toISOString().split('T')[0]
     })
     setEditingRental(rental)
   }
@@ -798,7 +840,7 @@ export default function Home() {
 
       return true
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
@@ -1461,7 +1503,7 @@ if (user.role === 'admin') {
                   onChange={(e) => setEditRentalData({...editRentalData, unitType: e.target.value})}
                   className="w-full p-2 border rounded-lg"
                 >
-                  {MACHINES.find(m => m.id === editRentalData.machineType)?.units.map((unit) => (
+                  {(MACHINES.find(m => m.id === editRentalData.machineType)?.units || []).map((unit) => (
                     <option key={unit} value={unit}>{unit}</option>
                   ))}
                 </select>
@@ -1502,6 +1544,16 @@ if (user.role === 'admin') {
                   onChange={(e) => setEditRentalData({...editRentalData, description: e.target.value})}
                   className="w-full p-2 border rounded-lg"
                   placeholder="Optional description"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Date</label>
+                <input
+                  type="date"
+                  value={editRentalData.date}
+                  onChange={(e) => setEditRentalData({...editRentalData, date: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                  max={new Date().toISOString().split('T')[0]}
                 />
               </div>
               <div>
@@ -2129,8 +2181,65 @@ if (user.role === 'admin') {
               >
                 <option value="Cash">Cash</option>
                 <option value="Online">Online</option>
+                <option value="Cheque">Cheque</option>
+                <option value="UPI">UPI</option>
               </select>
             </div>
+
+            {/* Date of Rental */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Date of Rental</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full p-2 border rounded-lg"
+                required
+              />
+            </div>
+
+            {/* Additional Costs */}
+            {/* <div className="mb-6">
+              <h3 className="text-lg font-medium mb-3">Additional Costs (Optional)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Diesel Cost</label>
+                  <input
+                    type="number"
+                    value={dieselCost}
+                    onChange={(e) => setDieselCost(e.target.value)}
+                    placeholder="0"
+                    className="w-full p-2 border rounded-lg"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Maintenance Cost</label>
+                  <input
+                    type="number"
+                    value={maintenanceCost}
+                    onChange={(e) => setMaintenanceCost(e.target.value)}
+                    placeholder="0"
+                    className="w-full p-2 border rounded-lg"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Operator Salary</label>
+                  <input
+                    type="number"
+                    value={operatorSalary}
+                    onChange={(e) => setOperatorSalary(e.target.value)}
+                    placeholder="0"
+                    className="w-full p-2 border rounded-lg"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+            </div> */}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {MACHINES.map((machine) => (
@@ -2198,7 +2307,7 @@ if (user.role === 'admin') {
                       <div key={machine.id} className="border rounded-lg p-4">
                         <h4 className="font-medium mb-2 capitalize">{machine.name} Rates</h4>
                         <div className="grid grid-cols-3 gap-4">
-                          {machine.units.filter(unit => !selectedUnit || unit === selectedUnit).map((unit) => (
+                          {machine.units.filter(unit => (!selectedUnit || unit === selectedUnit) && !(machine.id === 'excavator' && unit === 'hourly')).map((unit) => (
                             <div key={unit}>
                               <label className="block text-sm font-medium mb-1 capitalize">{unit}</label>
                               <input
@@ -2219,6 +2328,51 @@ if (user.role === 'admin') {
                             </div>
                           ))}
                         </div>
+                        {machine.id === 'excavator' && selectedUnit === 'hourly' && (
+                          <div className="mt-4 space-y-4">
+                            <h5 className="font-medium mb-2">JCB Hourly Rates</h5>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium mb-1">Normal Hourly Rate</label>
+                                <input
+                                  type="number"
+                                  value={normalHourlyRate}
+                                  onChange={(e) => {
+                                    setNormalHourlyRate(e.target.value)
+                                    // Recalculate all time slots
+                                    const newSlots = timeSlots.map(slot => ({
+                                      ...slot,
+                                      calculatedAmount: calculateHours(slot.start, slot.end) * (slot.isBreaker ? (parseFloat(breakerHourlyRate) || 0) : parseFloat(e.target.value) || 0)
+                                    }))
+                                    setTimeSlots(newSlots)
+                                  }}
+                                  className="w-full p-2 border rounded"
+                                  min="0"
+                                  placeholder="Normal rate"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium mb-1">Breaker Hourly Rate</label>
+                                <input
+                                  type="number"
+                                  value={breakerHourlyRate}
+                                  onChange={(e) => {
+                                    setBreakerHourlyRate(e.target.value)
+                                    // Recalculate all time slots
+                                    const newSlots = timeSlots.map(slot => ({
+                                      ...slot,
+                                      calculatedAmount: calculateHours(slot.start, slot.end) * (slot.isBreaker ? parseFloat(e.target.value) || 0 : (parseFloat(normalHourlyRate) || 0))
+                                    }))
+                                    setTimeSlots(newSlots)
+                                  }}
+                                  className="w-full p-2 border rounded"
+                                  min="0"
+                                  placeholder="Breaker rate"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2270,7 +2424,7 @@ if (user.role === 'admin') {
                               <label className="block text-sm font-medium">Start Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'start')}
-                                className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                                className="bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now
@@ -2280,7 +2434,7 @@ if (user.role === 'admin') {
                               type="time"
                               value={slot.start}
                               onChange={(e) => updateTimeSlot(index, 'start', e.target.value)}
-                              className="w-full p-2 border rounded-lg"
+                              className="w-full p-3 border rounded-lg text-lg"
                             />
                           </div>
                           <div>
@@ -2288,7 +2442,7 @@ if (user.role === 'admin') {
                               <label className="block text-sm font-medium">End Time</label>
                               <button
                                 onClick={() => setCurrentTime(index, 'end')}
-                                className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                                className="bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600"
                                 title="Set current time"
                               >
                                 Now
@@ -2298,20 +2452,58 @@ if (user.role === 'admin') {
                               type="time"
                               value={slot.end}
                               onChange={(e) => updateTimeSlot(index, 'end', e.target.value)}
-                              className="w-full p-2 border rounded-lg"
+                              className="w-full p-3 border rounded-lg text-lg"
                             />
                           </div>
                         </div>
                         <div className="text-lg sm:text-xl font-bold text-blue-800 text-center">
                           {calculateHours(slot.start, slot.end).toFixed(2)} hrs
                         </div>
+                        <div className="flex justify-center gap-2 mt-2">
+                          <button
+                            onClick={() => updateTimeSlotType(index, false)}
+                            className={`px-3 py-1 rounded text-sm font-medium ${
+                              !slot.isBreaker
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            Normal
+                          </button>
+                          <button
+                            onClick={() => updateTimeSlotType(index, true)}
+                            className={`px-3 py-1 rounded text-sm font-medium ${
+                              slot.isBreaker
+                                ? 'bg-orange-500 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            Breaker
+                          </button>
+                        </div>
                       </div>
                     ))}
-                    <div className="text-lg font-semibold text-center mt-4 p-2 bg-blue-50 rounded-lg">
-                      Total Hours: {quantity.toFixed(2)} hrs
-                    </div>
-                    <div className="text-lg font-semibold text-center mt-2 p-2 bg-green-50 rounded-lg">
-                      Total Amount: {formatCurrency(quantity * prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]])}
+                    <div className="space-y-2">
+                      {selectedMachine === 'excavator' && selectedUnit === 'hourly' ? (
+                        <>
+                          <div className="text-lg font-semibold text-center p-2 bg-blue-50 rounded-lg">
+                            JCB Hours: {timeSlots.filter(s => !s.isBreaker).reduce((sum, s) => sum + calculateHours(s.start, s.end), 0).toFixed(2)} hrs
+                          </div>
+                          <div className="text-lg font-semibold text-center p-2 bg-orange-50 rounded-lg">
+                            Breaker Hours: {timeSlots.filter(s => s.isBreaker).reduce((sum, s) => sum + calculateHours(s.start, s.end), 0).toFixed(2)} hrs
+                          </div>
+                          <div className="text-lg font-semibold text-center p-2 bg-blue-50 rounded-lg">
+                            Total Hours: {quantity.toFixed(2)} hrs
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-lg font-semibold text-center p-2 bg-blue-50 rounded-lg">
+                          Total Hours: {quantity.toFixed(2)} hrs
+                        </div>
+                      )}
+                      <div className="text-lg font-semibold text-center p-2 bg-green-50 rounded-lg">
+                        Total Amount: {selectedMachine === 'excavator' && selectedUnit === 'hourly' ? formatCurrency(timeSlots.reduce((sum, slot) => sum + slot.calculatedAmount, 0)) : formatCurrency(quantity * prices[selectedMachine as keyof typeof prices][selectedUnit as keyof typeof prices[keyof typeof prices]])}
+                      </div>
                     </div>
                     <button
                       onClick={addTimeSlot}
@@ -2351,7 +2543,7 @@ if (user.role === 'admin') {
               </div>
             )}
 
-            {selectedMachine && selectedUnit && (
+            {selectedMachine && selectedUnit && !(selectedMachine === 'excavator' && selectedUnit === 'hourly') && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 {selectedUnit !== 'monthly' && selectedUnit !== 'work' && (
                   <div className="flex justify-between items-center">
@@ -2553,7 +2745,15 @@ if (user.role === 'admin') {
                       <div>Customer: {rental.customer.name} ({rental.customer.contactNumber})</div>
                       <div>Location: {rental.customer.address || 'N/A'}</div>
                       <div>Date: {new Date(rental.date).toLocaleDateString()}</div>
-                      <div>Quantity: {rental.quantity} {rental.unitType}</div>
+                      {rental.machineType === 'excavator' && rental.unitType === 'hourly' ? (
+                        <div>
+                          JCB: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.start, slot.end), 0).toFixed(2)} hr @ ₹{rental.normalHourlyRate}
+                          <br />
+                          Breaker: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.start, slot.end), 0).toFixed(2)} hr @ ₹{rental.breakerHourlyRate}
+                        </div>
+                      ) : (
+                        <div>Quantity: {rental.quantity} {rental.unitType}</div>
+                      )}
                       {(rental as any).description && <div>Description: {(rental as any).description}</div>}
                     </div>
                   </div>

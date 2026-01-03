@@ -60,7 +60,11 @@ export async function PUT(
       paymentStatus,
       paymentMode,
       additionalAmount,
-      additionalPaymentMode
+      additionalPaymentMode,
+      date,
+      normalHourlyRate,
+      breakerHourlyRate,
+      timeSlots
     } = body
 
     if (!machineType || !unitType || !quantity || !pricePerUnit || !totalAmount ||
@@ -104,7 +108,11 @@ export async function PUT(
         operatorSalary: parseFloat(operatorSalary || 0),
         paidAmount: updatedPaidAmount,
         paymentStatus: paymentStatus || 'UNPAID',
-        paymentMode: paymentMode || null
+        paymentMode: paymentMode || null,
+        date: date ? new Date(date) : undefined,
+        normalHourlyRate: normalHourlyRate ? parseFloat(normalHourlyRate) : null,
+        breakerHourlyRate: breakerHourlyRate ? parseFloat(breakerHourlyRate) : null,
+        timeSlots: timeSlots ? JSON.stringify(timeSlots) : null
       },
       include: {
         operator: true,
