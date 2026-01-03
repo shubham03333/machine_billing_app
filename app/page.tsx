@@ -308,8 +308,8 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     date: '',
     normalHours: '',
     breakerHours: '',
-    normalRate: '',
-    breakerRate: '',
+    normalHourlyRate: '',
+    breakerHourlyRate: '',
     timeSlots: [] as {start: string, end: string, isBreaker: boolean, calculatedAmount: number}[]
   })
   const [originalPaidAmount, setOriginalPaidAmount] = useState(0)
@@ -611,8 +611,8 @@ const fetchOperators = async () => {
       date: new Date(rental.date).toISOString().split('T')[0],
       normalHours,
       breakerHours,
-      normalRate: rental.normalHourlyRate ? rental.normalHourlyRate.toString() : '',
-      breakerRate: rental.breakerHourlyRate ? rental.breakerHourlyRate.toString() : '',
+      normalHourlyRate: rental.normalHourlyRate ? rental.normalHourlyRate.toString() : '',
+      breakerHourlyRate: rental.breakerHourlyRate ? rental.breakerHourlyRate.toString() : '',
       timeSlots: timeSlots ? timeSlots.map((slot: any) => ({ start: slot.startTime, end: slot.endTime, isBreaker: slot.isBreaker, calculatedAmount: slot.calculatedAmount })) : []
     })
     setEditingRental(rental)
@@ -1617,34 +1617,34 @@ if (user.role === 'admin') {
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">JCB Hourly Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Normal Hours</label>
-                      <input
-                        type="number"
-                        value={editRentalData.normalHours}
-                        onChange={(e) => setEditRentalData({...editRentalData, normalHours: e.target.value})}
-                        className="w-full p-2 border rounded-lg"
-                        step="0.01"
-                        min="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Breaker Hours</label>
-                      <input
-                        type="number"
-                        value={editRentalData.breakerHours}
-                        onChange={(e) => setEditRentalData({...editRentalData, breakerHours: e.target.value})}
-                        className="w-full p-2 border rounded-lg"
-                        step="0.01"
-                        min="0"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Normal Hours</label>
+                    <input
+                      type="number"
+                      value={editRentalData.normalHours}
+                      className="w-full p-2 border rounded-lg bg-gray-100"
+                      step="0.01"
+                      min="0"
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Breaker Hours</label>
+                    <input
+                      type="number"
+                      value={editRentalData.breakerHours}
+                      className="w-full p-2 border rounded-lg bg-gray-100"
+                      step="0.01"
+                      min="0"
+                      readOnly
+                    />
+                  </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">Normal Rate</label>
                       <input
                         type="number"
-                        value={editRentalData.normalRate}
-                        onChange={(e) => setEditRentalData({...editRentalData, normalRate: e.target.value})}
+                        value={editRentalData.normalHourlyRate}
+                        onChange={(e) => setEditRentalData({...editRentalData, normalHourlyRate: e.target.value})}
                         className="w-full p-2 border rounded-lg"
                         min="0"
                       />
@@ -1653,8 +1653,8 @@ if (user.role === 'admin') {
                       <label className="block text-sm font-medium mb-2">Breaker Rate</label>
                       <input
                         type="number"
-                        value={editRentalData.breakerRate}
-                        onChange={(e) => setEditRentalData({...editRentalData, breakerRate: e.target.value})}
+                        value={editRentalData.breakerHourlyRate}
+                        onChange={(e) => setEditRentalData({...editRentalData, breakerHourlyRate: e.target.value})}
                         className="w-full p-2 border rounded-lg"
                         min="0"
                       />

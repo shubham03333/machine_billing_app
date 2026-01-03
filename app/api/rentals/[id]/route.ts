@@ -72,6 +72,57 @@ export async function PUT(
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Validate numeric fields
+    const quantityNum = parseFloat(quantity)
+    if (isNaN(quantityNum) || quantityNum < 0) {
+      return NextResponse.json({ error: 'Invalid quantity' }, { status: 400 })
+    }
+
+    const pricePerUnitNum = parseFloat(pricePerUnit)
+    if (isNaN(pricePerUnitNum) || pricePerUnitNum < 0) {
+      return NextResponse.json({ error: 'Invalid price per unit' }, { status: 400 })
+    }
+
+    const totalAmountNum = parseFloat(totalAmount)
+    if (isNaN(totalAmountNum) || totalAmountNum < 0) {
+      return NextResponse.json({ error: 'Invalid total amount' }, { status: 400 })
+    }
+
+    const dieselCostNum = parseFloat(dieselCost || 0)
+    if (isNaN(dieselCostNum) || dieselCostNum < 0) {
+      return NextResponse.json({ error: 'Invalid diesel cost' }, { status: 400 })
+    }
+
+    const maintenanceCostNum = parseFloat(maintenanceCost || 0)
+    if (isNaN(maintenanceCostNum) || maintenanceCostNum < 0) {
+      return NextResponse.json({ error: 'Invalid maintenance cost' }, { status: 400 })
+    }
+
+    const operatorSalaryNum = parseFloat(operatorSalary || 0)
+    if (isNaN(operatorSalaryNum) || operatorSalaryNum < 0) {
+      return NextResponse.json({ error: 'Invalid operator salary' }, { status: 400 })
+    }
+
+    const paidAmountNum = parseFloat(paidAmount || 0)
+    if (isNaN(paidAmountNum) || paidAmountNum < 0) {
+      return NextResponse.json({ error: 'Invalid paid amount' }, { status: 400 })
+    }
+
+    const additionalNum = parseFloat(additionalAmount || 0)
+    if (isNaN(additionalNum) || additionalNum < 0) {
+      return NextResponse.json({ error: 'Invalid additional amount' }, { status: 400 })
+    }
+
+    const normalHourlyRateNum = parseFloat(normalHourlyRate || 0)
+    if (normalHourlyRate && normalHourlyRate !== '' && (isNaN(normalHourlyRateNum) || normalHourlyRateNum < 0)) {
+      return NextResponse.json({ error: 'Invalid normal hourly rate' }, { status: 400 })
+    }
+
+    const breakerHourlyRateNum = parseFloat(breakerHourlyRate || 0)
+    if (breakerHourlyRate && breakerHourlyRate !== '' && (isNaN(breakerHourlyRateNum) || breakerHourlyRateNum < 0)) {
+      return NextResponse.json({ error: 'Invalid breaker hourly rate' }, { status: 400 })
+    }
+
     const rental = await prisma.rental.findUnique({
       where: { id },
       include: { customer: true }
@@ -91,29 +142,44 @@ export async function PUT(
       }
     })
 
-    const additional = parseFloat(additionalAmount || 0)
-    const updatedPaidAmount = parseFloat(paidAmount || 0) + additional
+    const updatedPaidAmount = paidAmountNum + additionalNum
+
+    const updateData: any = {
+      machineType,
+      unitType,
+      quantity: quantityNum,
+      pricePerUnit: pricePerUnitNum,
+      totalAmount: totalAmountNum,
+      description: description || null,
+      paidAmount: updatedPaidAmount,
+      paymentStatus: paymentStatus || 'UNPAID',
+      paymentMode: paymentMode || null,
+      date: date ? new Date(date) : undefined
+    }
+
+    // Only update optional fields if they have valid values (not empty strings)
+    if (dieselCost && dieselCost !== '') {
+      updateData.dieselCost = dieselCostNum
+    }
+    if (maintenanceCost && maintenanceCost !== '') {
+      updateData.maintenanceCost = maintenanceCostNum
+    }
+    if (operatorSalary && operatorSalary !== '') {
+      updateData.operatorSalary = operatorSalaryNum
+    }
+    if (normalHourlyRate && normalHourlyRate !== '') {
+      updateData.normalHourlyRate = parseFloat(normalHourlyRate)
+    }
+    if (breakerHourlyRate && breakerHourlyRate !== '') {
+      updateData.breakerHourlyRate = parseFloat(breakerHourlyRate)
+    }
+    if (timeSlots) {
+      updateData.timeSlots = JSON.stringify(timeSlots)
+    }
 
     const updatedRental = await prisma.rental.update({
       where: { id },
-      data: {
-        machineType,
-        unitType,
-        quantity: parseFloat(quantity),
-        pricePerUnit: parseFloat(pricePerUnit),
-        totalAmount: parseFloat(totalAmount),
-        description: description || null,
-        dieselCost: parseFloat(dieselCost || 0),
-        maintenanceCost: parseFloat(maintenanceCost || 0),
-        operatorSalary: parseFloat(operatorSalary || 0),
-        paidAmount: updatedPaidAmount,
-        paymentStatus: paymentStatus || 'UNPAID',
-        paymentMode: paymentMode || null,
-        date: date ? new Date(date) : undefined,
-        normalHourlyRate: normalHourlyRate ? parseFloat(normalHourlyRate) : null,
-        breakerHourlyRate: breakerHourlyRate ? parseFloat(breakerHourlyRate) : null,
-        timeSlots: timeSlots ? JSON.stringify(timeSlots) : null
-      },
+      data: updateData,
       include: {
         operator: true,
         customer: true,
@@ -122,11 +188,11 @@ export async function PUT(
     })
 
     // Create payment record for additional amount
-    if (additional > 0 && additionalPaymentMode) {
+    if (additionalNum > 0 && additionalPaymentMode) {
       await prisma.payment.create({
         data: {
           rentalId: id,
-          amount: additional,
+          amount: additionalNum,
           mode: additionalPaymentMode
         }
       })
