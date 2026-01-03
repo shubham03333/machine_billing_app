@@ -65,6 +65,14 @@ const formatQuantityForDisplay = (quantity: number, unit: string) => {
   return quantity.toString();
 };
 
+const formatDateDDMMYYYY = (date: string | Date) => {
+  const d = new Date(date);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 interface User {
   id: number
   name: string
@@ -804,7 +812,7 @@ const fetchOperators = async () => {
       r.totalAmount.toString(),
       r.paidAmount.toString(),
       r.paymentStatus,
-      new Date(r.date).toLocaleDateString(),
+      formatDateDDMMYYYY(r.date),
       r.description || '',
       r.dieselCost.toString(),
       r.maintenanceCost.toString(),
@@ -832,7 +840,7 @@ const fetchOperators = async () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-          <h1 className="text-2xl font-bold text-center mb-6">Rental Tracker</h1>
+          <h1 className="text-2xl font-bold text-center mb-6">🚜 JD Agro & Earthmovers</h1>
           <div className="space-y-4">
             <input
               type="password"
@@ -853,9 +861,9 @@ const fetchOperators = async () => {
             {error && <p className="text-red-500 text-center">{error}</p>}
           </div>
           <div className="mt-6 text-sm text-gray-600">
-            <p><strong>Test PINs:</strong></p>
+            {/* <p><strong>Test PINs:</strong></p>
             <p>Admin: 1234</p>
-            <p>Operator: 3333 or 9999</p>
+            <p>Operator: 3333 or 9999</p> */}
           </div>
         </div>
       </div>
@@ -1102,7 +1110,7 @@ if (user.role === 'admin') {
                       {filteredRentals.slice((overviewPage - 1) * 10, overviewPage * 10).map((rental) => (
                         <tr key={rental.id}>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">
-                            {new Date(rental.date).toLocaleDateString()}
+                            {formatDateDDMMYYYY(rental.date)}
                           </td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs capitalize">{rental.machineType}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.operator.name}</td>
@@ -1420,7 +1428,7 @@ if (user.role === 'admin') {
                           {formatCurrency(expense.amount)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {new Date(expense.date).toLocaleDateString()}
+                          {formatDateDDMMYYYY(expense.date)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex gap-2">
