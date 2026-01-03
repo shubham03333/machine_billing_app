@@ -70,6 +70,11 @@ interface User {
   role: string
 }
 
+interface Operator {
+  id: number
+  name: string
+}
+
 interface Payment {
   id: number
   rentalId: number
@@ -224,6 +229,8 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [rentals, setRentals] = useState<Rental[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [operators, setOperators] = useState<Operator[]>([])
+  const [selectedOperatorId, setSelectedOperatorId] = useState<number | null>(null)
   const [expenseDescription, setExpenseDescription] = useState('')
   const [expenseAmount, setExpenseAmount] = useState('')
   const [expenseDieselCost, setExpenseDieselCost] = useState('')
@@ -498,7 +505,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
           dieselCost: dieselCost ? parseFloat(dieselCost) : 0,
           maintenanceCost: maintenanceCost ? parseFloat(maintenanceCost) : 0,
           operatorSalary: operatorSalary ? parseFloat(operatorSalary) : 0,
-          paidAmount: selectedMachine === 'excavator' && selectedUnit === 'hourly' ? 0 : (advanceAmount ? parseFloat(advanceAmount) : 0),
+          paidAmount: advanceAmount ? parseFloat(advanceAmount) : 0,
           paymentStatus: 'UNPAID',
           paymentMode: paymentMode || undefined,
           operatorId: user.id,
@@ -2497,7 +2504,7 @@ if (user.role === 'admin') {
                               type="time"
                               value={slot.start}
                               onChange={(e) => updateTimeSlot(index, 'start', e.target.value)}
-                              className="w-full p-3 border rounded-lg text-lg"
+                              className="w-full p-4 sm:p-3 border rounded-lg text-xl sm:text-lg"
                             />
                           </div>
                           <div>
@@ -2515,7 +2522,7 @@ if (user.role === 'admin') {
                               type="time"
                               value={slot.end}
                               onChange={(e) => updateTimeSlot(index, 'end', e.target.value)}
-                              className="w-full p-3 border rounded-lg text-lg"
+                              className="w-full p-4 sm:p-3 border rounded-lg text-xl sm:text-lg"
                             />
                           </div>
                         </div>
