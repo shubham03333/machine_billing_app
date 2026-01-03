@@ -464,6 +464,7 @@ const fetchOperators = async () => {
           dieselCost: expenseDieselCost ? parseFloat(expenseDieselCost) : undefined,
           maintenanceCost: expenseMaintenanceCost ? parseFloat(expenseMaintenanceCost) : undefined,
           operatorSalary: expenseOperatorSalary ? parseFloat(expenseOperatorSalary) : undefined,
+          driverDrinkCost: expenseDriverDrinkCost ? parseFloat(expenseDriverDrinkCost) : undefined,
         })
       })
 
