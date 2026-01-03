@@ -18,7 +18,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { description, amount, operatorId, category, dieselCost, maintenanceCost, operatorSalary, date } = body
+    const { description, amount, operatorId, category, dieselCost, maintenanceCost, operatorSalary, driverDrinkCost, date } = body
 
     if (!description || !amount || !operatorId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         dieselCost: parseFloat(dieselCost || 0) || 0,
         maintenanceCost: parseFloat(maintenanceCost || 0) || 0,
         operatorSalary: parseFloat(operatorSalary || 0) || 0,
+        driverDrinkCost: parseFloat(driverDrinkCost || 0) || 0,
       },
       include: {
         operator: true

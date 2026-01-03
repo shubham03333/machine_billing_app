@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect } from 'react'
 import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit, LogOut, Home as HomeIcon, FileText, Users, Phone, Fuel, Clock, User, Wrench, IndianRupee } from 'lucide-react'
 import { StatsChart } from '../components/StatsChart'
@@ -119,6 +120,7 @@ interface Expense {
   dieselCost?: number
   maintenanceCost?: number
   operatorSalary?: number
+  driverDrinkCost?: number
   createdAt: string
 }
 
@@ -232,11 +234,18 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [operators, setOperators] = useState<Operator[]>([])
   const [selectedOperatorId, setSelectedOperatorId] = useState<number | null>(null)
   const [expenseDescription, setExpenseDescription] = useState('')
+
+  useEffect(() => {
+    if (user) {
+      setSelectedOperatorId(user.id)
+    }
+  }, [user])
   const [expenseAmount, setExpenseAmount] = useState('')
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0])
   const [expenseDieselCost, setExpenseDieselCost] = useState('')
   const [expenseMaintenanceCost, setExpenseMaintenanceCost] = useState('')
   const [expenseOperatorSalary, setExpenseOperatorSalary] = useState('')
+  const [expenseDriverDrinkCost, setExpenseDriverDrinkCost] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [mobileError, setMobileError] = useState('')
@@ -426,7 +435,8 @@ const fetchOperators = async () => {
       const diesel = parseFloat(expenseDieselCost) || 0
       const maintenance = parseFloat(expenseMaintenanceCost) || 0
       const salary = parseFloat(expenseOperatorSalary) || 0
-      finalAmount = (diesel + maintenance + salary).toString()
+      const driverDrink = parseFloat(expenseDriverDrinkCost) || 0
+      finalAmount = (diesel + maintenance + salary + driverDrink).toString()
     }
 
     // If description is empty, generate one based on filled categories
@@ -435,6 +445,7 @@ const fetchOperators = async () => {
       if (parseFloat(expenseDieselCost) > 0) categories.push('Diesel')
       if (parseFloat(expenseMaintenanceCost) > 0) categories.push('Maintenance')
       if (parseFloat(expenseOperatorSalary) > 0) categories.push('Operator Salary')
+      if (parseFloat(expenseDriverDrinkCost) > 0) categories.push('Driver Drink')
       finalDescription = categories.length > 0 ? categories.join(', ') : 'Expense'
     }
 
@@ -850,12 +861,13 @@ const fetchOperators = async () => {
     )
   }
 
-  const getExpenseCategory = (expense: Expense) => {
-    if (expense.dieselCost !== undefined && expense.dieselCost > 0) return 'Diesel'
-    if (expense.maintenanceCost !== undefined && expense.maintenanceCost > 0) return 'Maintenance'
-    if (expense.operatorSalary !== undefined && expense.operatorSalary > 0) return 'Operator Salary'
-    return 'Other'
-  }
+const getExpenseCategory = (expense: Expense) => {
+  if (expense.dieselCost !== undefined && expense.dieselCost > 0) return 'Diesel'
+  if (expense.maintenanceCost !== undefined && expense.maintenanceCost > 0) return 'Maintenance'
+  if (expense.operatorSalary !== undefined && expense.operatorSalary > 0) return 'Operator Salary'
+  if (expense.driverDrinkCost !== undefined && expense.driverDrinkCost > 0) return 'Driver Drink'
+  return 'Other'
+}
 
   const filteredExpenses = (expenses || [])
     .filter(expense => {
@@ -885,7 +897,7 @@ const fetchOperators = async () => {
 
       return true
     })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
@@ -1241,7 +1253,7 @@ if (user.role === 'admin') {
                     className="w-full p-2 border rounded-lg"
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Diesel Cost (Optional)</label>
                     <input
@@ -1278,10 +1290,22 @@ if (user.role === 'admin') {
                       disabled={expenseDescription.trim() !== ''}
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Driver Drink Cost (Optional)</label>
+                    <input
+                      type="number"
+                      value={expenseDriverDrinkCost}
+                      onChange={(e) => setExpenseDriverDrinkCost(e.target.value)}
+                      placeholder="0"
+                      className="w-full p-2 border rounded-lg"
+                      min="0"
+                      disabled={expenseDescription.trim() !== ''}
+                    />
+                  </div>
                 </div>
                 <button
                   onClick={saveExpense}
-                  disabled={loading || (!expenseDescription && !expenseAmount && !expenseDieselCost && !expenseMaintenanceCost && !expenseOperatorSalary) || (user.role === 'admin' && !selectedOperatorId)}
+                  disabled={loading || (!expenseDescription && !expenseAmount && !expenseDieselCost && !expenseMaintenanceCost && !expenseOperatorSalary && !expenseDriverDrinkCost) || (user.role === 'admin' && !selectedOperatorId)}
                   className="w-full bg-green-500 text-white p-3 rounded-lg disabled:bg-gray-300"
                 >
                   {loading ? 'Saving...' : 'Save Expense'}
@@ -1358,6 +1382,7 @@ if (user.role === 'admin') {
                     <option value="Diesel">Diesel</option>
                     <option value="Maintenance">Maintenance</option>
                     <option value="Operator Salary">Operator Salary</option>
+                    <option value="Driver Drink">Driver Drink</option>
                     <option value="Other">Other</option>
                   </select>
                   <select
