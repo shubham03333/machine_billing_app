@@ -279,6 +279,9 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     paymentStatus: '',
     contactNumber: ''
   })
+  const [customerFilter, setCustomerFilter] = useState({
+    contactNumber: ''
+  })
   const [editingRental, setEditingRental] = useState<Rental | null>(null)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
@@ -944,11 +947,19 @@ const getExpenseCategory = (expense: Expense) => {
       if (toDate && rentalDate > toDate) return false
       if (rentalFilter.machine && rental.machineType !== rentalFilter.machine) return false
       if (rentalFilter.paymentStatus && rental.paymentStatus !== rentalFilter.paymentStatus) return false
-      if (rentalFilter.contactNumber && !rental.customer.contactNumber.includes(rentalFilter.contactNumber)) return false
+      if (rentalFilter.contactNumber && !rental.customer.contactNumber.replace(/\s/g, '').includes(rentalFilter.contactNumber.replace(/\s/g, ''))) return false
 
       return true
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  const filteredCustomers = (customers || [])
+    .filter(customer => {
+      if (customerFilter.contactNumber && !customer.contactNumber.replace(/\s/g, '').includes(customerFilter.contactNumber.replace(/\s/g, ''))) return false
+
+      return true
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
@@ -1495,7 +1506,7 @@ if (user.role === 'admin') {
                   </select>
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div>
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
@@ -1582,7 +1593,7 @@ if (user.role === 'admin') {
           {adminActiveTab === 'customers' && (
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="p-6 border-b">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">All Customers</h2>
                   <button
                     onClick={() => {
@@ -1595,6 +1606,15 @@ if (user.role === 'admin') {
                     <RefreshCw size={16} />
                     Refresh
                   </button>
+                </div>
+                <div className="flex gap-4 flex-wrap items-center">
+                  <input
+                    type="text"
+                    value={customerFilter.contactNumber}
+                    onChange={(e) => setCustomerFilter({...customerFilter, contactNumber: e.target.value})}
+                    placeholder="Contact Number"
+                    className="px-3 py-1 border rounded text-sm"
+                  />
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -2512,11 +2532,6 @@ if (user.role === 'admin') {
                         setCustomerContact(contact)
                         if (contact && /^\d{10}$/.test(contact)) {
                           setMobileError('')
-                          const existingCustomer = customers.find(c => c.contactNumber === contact)
-                          if (existingCustomer) {
-                            setCustomerName(existingCustomer.name)
-                            setCustomerAddress(existingCustomer.address || '')
-                          }
                         } else if (contact) {
                           setMobileError('Mobile number must be exactly 10 digits.')
                         } else {
