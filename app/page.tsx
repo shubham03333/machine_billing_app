@@ -2343,16 +2343,12 @@ if (user.role === 'admin') {
               setSelectedRentalsForBill([])
               setBillDetails(null)
             }}
-            onPrint={() => window.print()}
           />
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Loading bill details...</p>
-          </div>
-        )}
-          </div>
-        </div>
-      )}
+        ) : null}
+      </div>
+    </div>
+  </div>
+)}
     </>
   )
 }
