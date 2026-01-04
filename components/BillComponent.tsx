@@ -188,10 +188,47 @@ Contact: +91-7558379410`
         </div>
       </div>
 
-      {/* Enhanced Rental Details Table */}
+      {/* Enhanced Rental Details */}
       <div className="mb-8">
         <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800 border-b-2 border-blue-200 pb-2">Rental Details</h2>
-        <div className="overflow-x-auto border-2 border-gray-200 rounded-xl shadow-sm">
+
+        {/* Mobile Layout: Cards */}
+        <div className="block sm:hidden space-y-4">
+          {bill.rentals.map((rental, index) => (
+            <div key={rental.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="font-medium text-gray-800 mb-2">{getRentalDescription(rental)}</div>
+              <div className="flex justify-between items-center text-sm">
+                <div className="text-gray-600">
+                  Quantity: {rental.unitType === 'hourly' && rental.machineType === 'excavator' ? (
+                    <div className="text-xs">
+                      {(() => {
+                        const normalSlots = rental.timeSlots?.filter(slot => !slot.isBreaker) || [];
+                        const normalHours = normalSlots.length > 0 ? normalSlots.reduce((sum, slot) => {
+                          const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
+                          return sum + hours;
+                        }, 0) : 0;
+                        return normalHours.toFixed(2);
+                      })()} hrs (Normal), {(() => {
+                        const breakerSlots = rental.timeSlots?.filter(slot => slot.isBreaker) || [];
+                        const breakerHours = breakerSlots.length > 0 ? breakerSlots.reduce((sum, slot) => {
+                          const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
+                          return sum + hours;
+                        }, 0) : 0;
+                        return breakerHours.toFixed(2);
+                      })()} hrs (Breaker)
+                    </div>
+                  ) : (
+                    `${rental.quantity} ${rental.unitType}`
+                  )}
+                </div>
+                <div className="font-bold text-gray-900">{formatCurrency(rental.totalAmount)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Layout: Table */}
+        <div className="hidden sm:block overflow-x-auto border-2 border-gray-200 rounded-xl shadow-sm">
           <table className="w-full min-w-[600px]">
             <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
               <tr>
@@ -325,13 +362,13 @@ Contact: +91-7558379410`
 
       {/* Enhanced Professional Buttons */}
       <div className="flex flex-wrap justify-center gap-4 sm:gap-6 print:hidden mt-8">
-        <button
+        {/* <button
           onClick={onPrint}
           className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
         >
           <span>🖨️</span>
           Print Bill
-        </button>
+        </button> */}
         <button
           onClick={shareBillOnWhatsApp}
           className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
