@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
       include: {
         customer: true,
         operator: true,
-        payments: true
+        payments: true,
+        bill: true
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -106,7 +107,40 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(rental, { status: 201 })
+    // Create a bill for this rental
+    const billCount = await prisma.bill.count();
+    const billNumber = `BILL-${String(billCount + 1).padStart(4, '0')}`;
+
+    const bill = await prisma.bill.create({
+      data: {
+        billNumber,
+        customerId: customer.id,
+        totalAmount: total,
+        dueDate: new Date(date), // Set due date to rental date, can be modified later
+        rentals: {
+          connect: [{ id: rental.id }]
+        }
+      }
+    });
+
+    // Update rental to link it to the bill
+    await prisma.rental.update({
+      where: { id: rental.id },
+      data: { billId: bill.id }
+    });
+
+    // Return rental with bill information
+    const rentalWithBill = await prisma.rental.findUnique({
+      where: { id: rental.id },
+      include: {
+        customer: true,
+        operator: true,
+        payments: true,
+        bill: true
+      }
+    });
+
+    return NextResponse.json(rentalWithBill, { status: 201 })
   } catch (error) {
     console.error('Create rental error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -1,7 +1,5 @@
 "use client"
 
-"use client"
-
 import { useState, useEffect } from 'react'
 import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit, LogOut, Home as HomeIcon, FileText, Users, Phone, Fuel, Clock, User, Wrench, IndianRupee } from 'lucide-react'
 import { StatsChart } from '../components/StatsChart'
@@ -297,6 +295,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [additionalPaymentMode, setAdditionalPaymentMode] = useState('Cash')
   const [billDetails, setBillDetails] = useState<any>(null)
   const [billLoading, setBillLoading] = useState(false)
+  const [billError, setBillError] = useState('')
   const [showBillModal, setShowBillModal] = useState(false)
   const [selectedRentalsForBill, setSelectedRentalsForBill] = useState<Rental[]>([])
   const [billDueDate, setBillDueDate] = useState('')
@@ -1244,17 +1243,20 @@ if (user.role === 'admin') {
                               >
                                 <BarChart3 size={14} />
                               </button>
-    <button
-      onClick={(e) => {
-        e.stopPropagation()
-        setSelectedRentalsForBill([rental])
-        setShowBillModal(true)
-      }}
-      className="p-1 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded"
-      title="View Bill"
-    >
-      <FileText size={14} />
-    </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (rental.billId) {
+                                    setSelectedRentalsForBill([rental])
+                                    setShowBillModal(true)
+                                  }
+                                }}
+                                className={`p-1 rounded ${rental.billId ? 'text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50' : 'text-gray-400 cursor-not-allowed'}`}
+                                title={rental.billId ? 'View Bill' : 'No Bill Available'}
+                                disabled={!rental.billId}
+                              >
+                                <FileText size={14} />
+                              </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -2328,7 +2330,11 @@ if (user.role === 'admin') {
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {billDetails ? (
+              {selectedRentalsForBill.length > 0 && !selectedRentalsForBill[0].billId ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No bill exists for this rental.</p>
+                </div>
+              ) : billDetails ? (
                 <div className="space-y-6">
                   {/* Bill Header */}
                   <div className="bg-gray-50 p-4 rounded-lg">
@@ -2348,9 +2354,28 @@ if (user.role === 'admin') {
                     </div>
                   </div>
 
+                  {/* Bill Summary */}
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-lg mb-4">Bill Summary</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Total Amount:</span>
+                        <span className="font-semibold text-green-600">{formatCurrency(billDetails.totalAmount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Paid Amount:</span>
+                        <span className="font-semibold text-green-600">{formatCurrency(billDetails.paidAmount || 0)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span>Pending Amount:</span>
+                        <span className="font-semibold text-red-600">{formatCurrency(billDetails.totalAmount - (billDetails.paidAmount || 0))}</span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Rentals in Bill */}
                   <div>
-                    <h3 className="font-semibold text-lg mb-4">Rentals Included</h3>
+                    <h3 className="font-semibold text-lg mb-4">Rental Details</h3>
                     <div className="space-y-4">
                       {billDetails.rentals?.map((rental: Rental) => (
                         <div key={rental.id} className="border rounded-lg p-4 bg-gray-50">
@@ -2400,25 +2425,6 @@ if (user.role === 'admin') {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-
-                  {/* Bill Summary */}
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-4">Bill Summary</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Amount:</span>
-                        <span className="font-semibold text-green-600">{formatCurrency(billDetails.totalAmount)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Paid Amount:</span>
-                        <span className="font-semibold text-green-600">{formatCurrency(billDetails.paidAmount || 0)}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2">
-                        <span>Pending Amount:</span>
-                        <span className="font-semibold text-red-600">{formatCurrency(billDetails.totalAmount - (billDetails.paidAmount || 0))}</span>
-                      </div>
                     </div>
                   </div>
                 </div>
