@@ -1,27 +1,14 @@
-# TODO: Add Payment Methods and Mobile-Friendly UI
+# TODO: Fix Rental Customer Association Issue
 
-## Database Updates
-- [x] Add paymentMode column to Rental model in Prisma schema
-- [x] Run Prisma migration to update database
+## Problem
+- When creating a new rental with an existing contact number, the system associates it with the existing customer.
+- This causes updates to one rental to affect all rentals linked to the same customer, leading to unintended changes.
 
-## UI Updates for Payment Methods
-- [x] Update Rental interface in page.tsx to include paymentMode
-- [x] Add payment mode selection (Cash/Online/Cheque/UPI) in add rental form
-- [x] Add payment mode selection in edit rental modal
-- [x] Update createRental function to handle paymentMode
-- [x] Update updateRental function to handle paymentMode
-- [x] Add popup on rental row click showing payment breakdown (total, paid by mode)
+## Solution
+- Modify the customer creation logic in the POST method of `app/api/rentals/route.ts` to always create a new customer for each rental.
+- This ensures each rental is linked to a unique customer, preventing unintended associations.
 
-## Bug Fixes
-- [x] Fix rental date display issue: Use selected date instead of creation date in admin panel recent rentals table
-
-## Mobile-Friendly Improvements
-- [ ] Improve time selection mobile responsiveness
-- [ ] Enhance admin dashboard mobile layout
-- [ ] Test and adjust responsive classes throughout
-
-## Testing
-- [ ] Test adding rentals with payment modes
-- [ ] Test editing rentals with payment modes
-- [ ] Test payment breakdown popup
-- [ ] Verify mobile responsiveness
+## Steps
+- [ ] Update the POST method in `app/api/rentals/route.ts` to remove the find-or-create logic and always create a new customer.
+- [ ] Test the changes to ensure new customers are created for each rental.
+- [ ] Verify that updates to one rental do not affect others.

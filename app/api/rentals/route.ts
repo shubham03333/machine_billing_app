@@ -48,19 +48,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Operator not found' }, { status: 400 })
     }
 
-    // Find or create customer
-    let customer = await prisma.customer.findFirst({
-      where: { name: customerName }
+    // Always create a new customer for each rental to prevent unintended associations
+    const customer = await prisma.customer.create({
+      data: {
+        name: customerName,
+        contactNumber: customerContact,
+        address: customerAddress,
+      }
     })
-    if (!customer) {
-      customer = await prisma.customer.create({
-        data: {
-          name: customerName,
-          contactNumber: customerContact,
-          address: customerAddress,
-        }
-      })
-    }
 
     const paid = parseFloat(paidAmount || 0)
     const total = parseFloat(totalAmount)
