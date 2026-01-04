@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit, LogOut, Home as HomeIcon, FileText, Users, Phone, Fuel, Clock, User, Wrench, IndianRupee } from 'lucide-react'
 import { StatsChart } from '../components/StatsChart'
+import BillComponent from '../components/BillComponent'
 
 
 const STANDARD_PRICES = {
@@ -2329,111 +2330,26 @@ if (user.role === 'admin') {
                 ×
               </button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {selectedRentalsForBill.length > 0 && !selectedRentalsForBill[0].billId ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No bill exists for this rental.</p>
-                </div>
-              ) : billDetails ? (
-                <div className="space-y-6">
-                  {/* Bill Header */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h3 className="font-semibold text-lg mb-2">Bill Information</h3>
-                        <p><strong>Bill ID:</strong> {billDetails.id}</p>
-                        <p><strong>Date:</strong> {formatDateDDMMYYYY(billDetails.date)}</p>
-                        <p><strong>Due Date:</strong> {billDueDate ? formatDateDDMMYYYY(billDueDate) : 'N/A'}</p>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-2">Customer Details</h3>
-                        <p><strong>Name:</strong> {billDetails.customer?.name}</p>
-                        <p><strong>Contact:</strong> {billDetails.customer?.contactNumber}</p>
-                        <p><strong>Address:</strong> {billDetails.customer?.address || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bill Summary */}
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-4">Bill Summary</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Amount:</span>
-                        <span className="font-semibold text-green-600">{formatCurrency(billDetails.totalAmount)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Paid Amount:</span>
-                        <span className="font-semibold text-green-600">{formatCurrency(billDetails.paidAmount || 0)}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2">
-                        <span>Pending Amount:</span>
-                        <span className="font-semibold text-red-600">{formatCurrency(billDetails.totalAmount - (billDetails.paidAmount || 0))}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Rentals in Bill */}
-                  <div>
-                    <h3 className="font-semibold text-lg mb-4">Rental Details</h3>
-                    <div className="space-y-4">
-                      {billDetails.rentals?.map((rental: Rental) => (
-                        <div key={rental.id} className="border rounded-lg p-4 bg-gray-50">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div>
-                              <span className="font-medium text-gray-700">Date:</span>
-                              <div>{formatDateDDMMYYYY(rental.date)}</div>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-700">Machine:</span>
-                              <div className="capitalize">{rental.machineType}</div>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-700">Quantity:</span>
-                              <div>{rental.quantity} {rental.unitType}</div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <span className="font-medium text-gray-700">Operator:</span>
-                              <div>{rental.operator.name}</div>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-700">Amount:</span>
-                              <div className="text-green-600 font-semibold">{formatCurrency(rental.totalAmount)}</div>
-                            </div>
-                          </div>
-                          {rental.description && (
-                            <div className="mb-4">
-                              <span className="font-medium text-gray-700">Description:</span>
-                              <div className="mt-1">{rental.description}</div>
-                            </div>
-                          )}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div>
-                              <span className="font-medium text-gray-700">Diesel Cost:</span>
-                              <div className="text-red-600">{formatCurrency(rental.dieselCost)}</div>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-700">Maintenance Cost:</span>
-                              <div className="text-red-600">{formatCurrency(rental.maintenanceCost)}</div>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-700">Operator Salary:</span>
-                              <div className="text-red-600">{formatCurrency(rental.operatorSalary)}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Loading bill details...</p>
-                </div>
-              )}
-            </div>
+      <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        {selectedRentalsForBill.length > 0 && !selectedRentalsForBill[0].billId ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No bill exists for this rental.</p>
+          </div>
+        ) : billDetails ? (
+          <BillComponent
+            bill={billDetails}
+            onClose={() => {
+              setShowBillModal(false)
+              setSelectedRentalsForBill([])
+              setBillDetails(null)
+            }}
+            onPrint={() => window.print()}
+          />
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Loading bill details...</p>
+          </div>
+        )}
           </div>
         </div>
       )}
