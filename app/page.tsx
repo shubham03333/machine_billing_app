@@ -154,7 +154,8 @@ export default function Home() {
     const storedUser = localStorage.getItem('user')
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser))
+        const parsedUser = JSON.parse(storedUser)
+        setUser(parsedUser)
       } catch (error) {
         console.error('Error parsing stored user:', error)
         localStorage.removeItem('user')
@@ -273,13 +274,16 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     category: '',
     operator: ''
   })
-  const [rentalFilter, setRentalFilter] = useState({
-    dateFrom: '',
-    dateTo: '',
-    machine: '',
-    paymentStatus: '',
-    contactNumber: ''
-  })
+const [rentalFilter, setRentalFilter] = useState({
+  dateFrom: '',
+  dateTo: '',
+  machine: '',
+  paymentStatus: '',
+  contactNumber: '',
+  customerSearch: '',
+  addressSearch: ''
+})
+  const [searchQuery, setSearchQuery] = useState('')
   const [customerFilter, setCustomerFilter] = useState({
     contactNumber: ''
   })
@@ -305,6 +309,10 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     contactNumber: '',
     address: ''
   })
+  const [showContactDropdown, setShowContactDropdown] = useState(false)
+  const [contactSearch, setContactSearch] = useState('')
+  const [operatorDateFrom, setOperatorDateFrom] = useState('')
+  const [operatorDateTo, setOperatorDateTo] = useState('')
 
   // Fetch bill details when bill modal opens
   useEffect(() => {
@@ -594,6 +602,7 @@ const fetchOperators = async () => {
 
       if (res.ok) {
         fetchRentals()
+        fetchCustomers()
         setSelectedMachine('')
         setSelectedUnit('')
         setQuantity(1)
@@ -985,8 +994,6 @@ const getExpenseCategory = (expense: Expense) => {
   const totalAcre = filteredRentals.reduce((sum, rental) => {
     if (rental.unitType === 'acre') {
       return sum + rental.quantity;
-    } else if (rental.unitType === 'guntha') {
-      return sum + (rental.quantity / 40);
     }
     return sum;
   }, 0)
@@ -1166,13 +1173,51 @@ if (user.role === 'admin') {
                         <option value="PARTIALLY_PAID">Partially Paid</option>
                         <option value="PAID">Paid</option>
                       </select>
-                      <input
-                        type="text"
-                        value={rentalFilter.contactNumber}
-                        onChange={(e) => setRentalFilter({...rentalFilter, contactNumber: e.target.value})}
-                        placeholder="Contact Number"
-                        className="px-3 py-1 border rounded text-sm min-w-0 flex-1 sm:flex-none"
-                      />
+                      <div className="relative flex-1 sm:flex-none min-w-0">
+                        <input
+                          type="text"
+                          value={contactSearch}
+                          onChange={(e) => {
+                            setContactSearch(e.target.value)
+                            setRentalFilter({...rentalFilter, contactNumber: e.target.value})
+                            setShowContactDropdown(e.target.value.length > 0)
+                          }}
+                          onFocus={() => setShowContactDropdown(contactSearch.length > 0)}
+                          onBlur={() => setTimeout(() => setShowContactDropdown(false), 200)}
+                          placeholder="Contact Number"
+                          className="px-3 py-1 border rounded text-sm w-full"
+                        />
+                        {showContactDropdown && (
+                          <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto mt-1">
+                            {Array.from(new Set(customers.map(c => c.contactNumber)))
+                              .filter(contact =>
+                                contact && contact.toLowerCase().includes(contactSearch.toLowerCase())
+                              )
+                              .map((contact) => (
+                                <div
+                                  key={contact}
+                                  className="p-2 hover:bg-gray-100 cursor-pointer"
+                                  onClick={() => {
+                                    setContactSearch(contact)
+                                    setRentalFilter({...rentalFilter, contactNumber: contact})
+                                    setShowContactDropdown(false)
+                                  }}
+                                >
+                                  <div className="font-medium">{contact}</div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="relative flex-1 sm:flex-none min-w-0">
+                        <input
+                          type="text"
+                          value={rentalFilter.customerSearch}
+                          onChange={(e) => setRentalFilter({...rentalFilter, customerSearch: e.target.value})}
+                          placeholder="Customer Name"
+                          className="px-3 py-1 border rounded text-sm w-full"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2450,9 +2495,9 @@ if (user.role === 'admin') {
                       onChange={(e) => {
                         setCustomerName(e.target.value)
                         setCustomerSearch(e.target.value)
-                        setShowCustomerDropdown(e.target.value.length > 0)
+                        setShowCustomerDropdown(true)
                       }}
-                      onFocus={() => setShowCustomerDropdown(customerSearch.length > 0)}
+                      onFocus={() => setShowCustomerDropdown(true)}
                       onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
                       placeholder="Enter customer name"
                       className="w-full p-2 border rounded-lg"
@@ -2462,7 +2507,11 @@ if (user.role === 'admin') {
                       <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
                         {(customers || [])
                           .filter(customer =>
-                            customer && customer.name && customer.name.toLowerCase().includes(customerSearch.toLowerCase())
+                            customer && (
+                              (customer.name && customer.name.toLowerCase().includes(customerSearch.toLowerCase())) ||
+                              (customer.address && customer.address.toLowerCase().includes(customerSearch.toLowerCase())) ||
+                              (customer.contactNumber && customer.contactNumber.toLowerCase().includes(customerSearch.toLowerCase()))
+                            )
                           )
                           .map((customer) => (
                             <div
@@ -2470,6 +2519,7 @@ if (user.role === 'admin') {
                               className="p-2 hover:bg-gray-100 cursor-pointer"
                               onClick={() => {
                                 setCustomerName(customer.name)
+                                setCustomerSearch(customer.name)
                                 setCustomerContact(customer.contactNumber)
                                 setCustomerAddress(customer.address || '')
                                 setShowCustomerDropdown(false)
@@ -2477,6 +2527,7 @@ if (user.role === 'admin') {
                             >
                               <div className="font-medium">{customer.name}</div>
                               <div className="text-sm text-gray-600">{customer.contactNumber}</div>
+                              {customer.address && <div className="text-sm text-gray-500">{customer.address}</div>}
                             </div>
                           ))}
                       </div>
