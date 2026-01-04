@@ -9,6 +9,6 @@
 - This ensures each rental is linked to a unique customer, preventing unintended associations.
 
 ## Steps
-- [ ] Update the POST method in `app/api/rentals/route.ts` to remove the find-or-create logic and always create a new customer.
-- [ ] Test the changes to ensure new customers are created for each rental.
-- [ ] Verify that updates to one rental do not affect others.
+- [x] Update the POST method in `app/api/rentals/route.ts` to remove the find-or-create logic and always create a new customer.
+- [x] Test the changes to ensure new customers are created for each rental.
+- [x] Verify that updates to one rental do not affect others.

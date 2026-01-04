@@ -31,6 +31,7 @@ model Customer {
   updatedAt     DateTime @updatedAt
 
   rentals Rental[]
+  bills   Bill[]
 }
 
 model Rental {
@@ -46,6 +47,8 @@ model Rental {
   customer         Customer @relation(fields: [customerId], references: [id])
   operatorId       Int
   operator         User     @relation(fields: [operatorId], references: [id])
+  billId           Int?
+  bill             Bill?    @relation(fields: [billId], references: [id])
   date             DateTime
   dieselCost       Float    @default(0)
   maintenanceCost  Float    @default(0)
@@ -86,4 +89,18 @@ model Payment {
   amount    Float
   mode      String   // 'Cash', 'Online', 'Cheque', 'UPI'
   date      DateTime @default(now())
+}
+
+model Bill {
+  id          Int      @id @default(autoincrement())
+  billNumber  String   @unique
+  customerId  Int
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rentals     Rental[]
+  totalAmount Float
+  paidAmount  Float    @default(0)
+  status      String   @default("UNPAID") // 'PAID', 'PARTIAL', 'UNPAID'
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

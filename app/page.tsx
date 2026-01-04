@@ -113,6 +113,7 @@ interface Rental {
   advanceAmount: number
   createdAt: string
   payments: Payment[]
+  billId?: number
   // JCB hourly specific fields
   normalHourlyRate?: number
   breakerHourlyRate?: number
@@ -275,7 +276,8 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     dateFrom: '',
     dateTo: '',
     machine: '',
-    paymentStatus: ''
+    paymentStatus: '',
+    contactNumber: ''
   })
   const [editingRental, setEditingRental] = useState<Rental | null>(null)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
@@ -285,13 +287,40 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentRental, setPaymentRental] = useState<Rental | null>(null)
   const [selectedRentalForBreakdown, setSelectedRentalForBreakdown] = useState<Rental | null>(null)
+  const [selectedRentalForBill, setSelectedRentalForBill] = useState<Rental | null>(null)
   const [additionalAmount, setAdditionalAmount] = useState('')
   const [additionalPaymentMode, setAdditionalPaymentMode] = useState('Cash')
+  const [billDetails, setBillDetails] = useState<any>(null)
+  const [showBillModal, setShowBillModal] = useState(false)
+  const [selectedRentalsForBill, setSelectedRentalsForBill] = useState<Rental[]>([])
+  const [billDueDate, setBillDueDate] = useState('')
   const [editCustomerData, setEditCustomerData] = useState({
     name: '',
     contactNumber: '',
     address: ''
   })
+
+  // Fetch bill details when bill modal opens
+  useEffect(() => {
+    if (showBillModal && selectedRentalsForBill.length > 0 && selectedRentalsForBill[0].billId) {
+      const fetchBillDetails = async () => {
+        try {
+          const res = await fetch(`/api/bills/${selectedRentalsForBill[0].billId}`)
+          if (res.ok) {
+            const bill = await res.json()
+            setBillDetails(bill)
+          } else {
+            setError('Failed to fetch bill details')
+          }
+        } catch (err) {
+          setError('Failed to fetch bill details')
+        }
+      }
+      fetchBillDetails()
+    } else {
+      setBillDetails(null)
+    }
+  }, [showBillModal, selectedRentalsForBill])
   const [editCustomerMobileError, setEditCustomerMobileError] = useState('')
   const [operatorRentalsPage, setOperatorRentalsPage] = useState(1)
   const [editRentalData, setEditRentalData] = useState({
@@ -734,6 +763,17 @@ const fetchOperators = async () => {
     }
   }
 
+  const deleteCustomer = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this customer?')) return
+
+    try {
+      await fetch(`/api/customers/${id}`, { method: 'DELETE' })
+      fetchCustomers()
+    } catch (err) {
+      console.error('Failed to delete customer')
+    }
+  }
+
   const addPayment = async () => {
     if (!paymentRental || !additionalAmount || !additionalPaymentMode) return
 
@@ -903,6 +943,7 @@ const getExpenseCategory = (expense: Expense) => {
       if (toDate && rentalDate > toDate) return false
       if (rentalFilter.machine && rental.machineType !== rentalFilter.machine) return false
       if (rentalFilter.paymentStatus && rental.paymentStatus !== rentalFilter.paymentStatus) return false
+      if (rentalFilter.contactNumber && !rental.customer.contactNumber.includes(rentalFilter.contactNumber)) return false
 
       return true
     })
@@ -1086,6 +1127,13 @@ if (user.role === 'admin') {
                         <option value="PARTIALLY_PAID">Partially Paid</option>
                         <option value="PAID">Paid</option>
                       </select>
+                      <input
+                        type="text"
+                        value={rentalFilter.contactNumber}
+                        onChange={(e) => setRentalFilter({...rentalFilter, contactNumber: e.target.value})}
+                        placeholder="Contact Number"
+                        className="px-3 py-1 border rounded text-sm min-w-0 flex-1 sm:flex-none"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1148,6 +1196,16 @@ if (user.role === 'admin') {
                               >
                                 <BarChart3 size={14} />
                               </button>
+    <button
+      onClick={() => {
+        setSelectedRentalsForBill([rental])
+        setShowBillModal(true)
+      }}
+      className="p-1 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded"
+      title="View Bill"
+    >
+      <FileText size={14} />
+    </button>
                               <button
                                 onClick={() => deleteRental(rental.id)}
                                 className="text-red-600 hover:text-red-900"
@@ -1509,7 +1567,7 @@ if (user.role === 'admin') {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-max">
+                <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
@@ -1524,9 +1582,9 @@ if (user.role === 'admin') {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {customers.slice((customersPage - 1) * 10, customersPage * 10).map((customer) => (
                       <tr key={customer.id} onClick={() => setSelectedCustomer(customer)} className="cursor-pointer hover:bg-gray-50">
-                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap" title={customer.name}>{customer.name}</td>
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap truncate" title={customer.name}>{customer.name}</td>
                         <td className="px-2 sm:px-6 py-4 whitespace-nowrap" title={customer.contactNumber}>{customer.contactNumber}</td>
-                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap" title={customer.address || 'N/A'}>{customer.address || 'N/A'}</td>
+                        <td className="px-2 sm:px-6 py-4 whitespace-nowrap truncate" title={customer.address || 'N/A'}>{customer.address || 'N/A'}</td>
                         <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-green-600 font-semibold">
                           {formatCurrency(customer.totalRevenue)}
                         </td>
@@ -1535,15 +1593,26 @@ if (user.role === 'admin') {
                           {customer.lastRentalDate ? new Date(customer.lastRentalDate).toLocaleDateString() : 'N/A'}
                         </td>
                         <td className="px-2 sm:px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              startEditCustomer(customer)
-                            }}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            <BarChart3 size={16} />
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                startEditCustomer(customer)
+                              }}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            {/* <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteCustomer(customer.id)
+                              }}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 size={16} />
+                            </button> */}
+                          </div>
                         </td>
                       </tr>
                     ))}
