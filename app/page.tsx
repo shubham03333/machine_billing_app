@@ -1,5 +1,7 @@
 "use client"
 
+"use client"
+
 import { useState, useEffect } from 'react'
 import { Minus, LogIn, BarChart3, Trash2, Plus, RefreshCw, Edit, LogOut, Home as HomeIcon, FileText, Users, Phone, Fuel, Clock, User, Wrench, IndianRupee } from 'lucide-react'
 import { StatsChart } from '../components/StatsChart'
@@ -379,6 +381,11 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [overviewPage, setOverviewPage] = useState(1)
   const [expensesPage, setExpensesPage] = useState(1)
   const [customersPage, setCustomersPage] = useState(1)
+
+  // Reset customers page when filter changes
+  useEffect(() => {
+    setCustomersPage(1)
+  }, [customerFilter.contactNumber])
 
   useEffect(() => {
     if (user) {
@@ -955,8 +962,11 @@ const getExpenseCategory = (expense: Expense) => {
 
   const filteredCustomers = (customers || [])
     .filter(customer => {
-      if (customerFilter.contactNumber && !customer.contactNumber.replace(/\s/g, '').includes(customerFilter.contactNumber.replace(/\s/g, ''))) return false
-
+      if (customerFilter.contactNumber) {
+        const filterNormalized = customerFilter.contactNumber.replace(/\D/g, '')
+        const contactNormalized = customer.contactNumber ? customer.contactNumber.replace(/\D/g, '') : ''
+        if (!contactNormalized.includes(filterNormalized)) return false
+      }
       return true
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -1631,7 +1641,7 @@ if (user.role === 'admin') {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {customers.slice((customersPage - 1) * 10, customersPage * 10).map((customer) => (
+                    {filteredCustomers.slice((customersPage - 1) * 10, customersPage * 10).map((customer) => (
                       <tr key={customer.id} onClick={() => setSelectedCustomer(customer)} className="cursor-pointer hover:bg-gray-50">
                         <td className="px-2 sm:px-6 py-4 whitespace-nowrap truncate" title={customer.name}>{customer.name}</td>
                         <td className="px-2 sm:px-6 py-4 whitespace-nowrap" title={customer.contactNumber}>{customer.contactNumber}</td>
