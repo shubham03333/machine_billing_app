@@ -964,6 +964,7 @@ const getExpenseCategory = (expense: Expense) => {
       if (rentalFilter.machine && rental.machineType !== rentalFilter.machine) return false
       if (rentalFilter.paymentStatus && rental.paymentStatus !== rentalFilter.paymentStatus) return false
       if (rentalFilter.contactNumber && !rental.customer.contactNumber.replace(/\s/g, '').includes(rentalFilter.contactNumber.replace(/\s/g, ''))) return false
+      if (rentalFilter.customerSearch && !rental.customer.name.toLowerCase().includes(rentalFilter.customerSearch.toLowerCase())) return false
 
       return true
     })
