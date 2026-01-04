@@ -65,13 +65,42 @@ const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint })
     return `${day}/${month}/${year}`
   }
 
+  const calculateHours = (start: string, end: string) => {
+    if (!start || !end) return 0
+
+    // Handle different time formats
+    let startTime = start
+    let endTime = end
+
+    // If time includes seconds, remove them
+    if (start.includes(':')) {
+      const startParts = start.split(':')
+      startTime = `${startParts[0]}:${startParts[1]}`
+    }
+    if (end.includes(':')) {
+      const endParts = end.split(':')
+      endTime = `${endParts[0]}:${endParts[1]}`
+    }
+
+    const startDate = new Date(`2000-01-01T${startTime}:00`)
+    let endDate = new Date(`2000-01-01T${endTime}:00`)
+
+    if (endDate < startDate) {
+      endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000) // add 24 hours for overnight shifts
+    }
+
+    const diffMs = endDate.getTime() - startDate.getTime()
+    const diffHours = diffMs / (1000 * 60 * 60)
+    return Math.max(0, diffHours)
+  }
+
   const getRentalDescription = (rental: Rental) => {
     if (rental.machineType === 'harvester') {
       return `Harvester – ${rental.quantity} ${rental.unitType}${rental.description ? ` (${rental.description})` : ''}`
     } else if (rental.machineType === 'excavator' && rental.unitType === 'hourly') {
-      const normalHours = rental.timeSlots?.filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + (new Date(`2000-01-01T${slot.endTime}:00`).getTime() - new Date(`2000-01-01T${slot.startTime}:00`).getTime()) / (1000 * 60 * 60), 0) || 0
-      const breakerHours = rental.timeSlots?.filter(slot => slot.isBreaker).reduce((sum, slot) => sum + (new Date(`2000-01-01T${slot.endTime}:00`).getTime() - new Date(`2000-01-01T${slot.startTime}:00`).getTime()) / (1000 * 60 * 60), 0) || 0
-      return `JCB – ${normalHours.toFixed(2)} hrs (Normal) + ${breakerHours.toFixed(2)} hrs (Breaker)${rental.description ? ` (${rental.description})` : ''}`
+      const normalHours = rental.timeSlots?.filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0) || 0
+      const breakerHours = rental.timeSlots?.filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0) || 0
+      return `JCB${rental.description ? ` (${rental.description})` : ''}`
     } else if (rental.machineType === 'excavator') {
       return `JCB – ${rental.quantity} ${rental.unitType}${rental.description ? ` (${rental.description})` : ''}`
     } else {
@@ -103,14 +132,14 @@ const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint })
         {/* Company Logo Placeholder */}
         <div className="mb-3 sm:mb-4 print:mb-2">
           <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full mx-auto flex items-center justify-center print:w-12 print:h-12">
-            <span className="text-blue-600 font-bold text-lg sm:text-xl print:text-lg">MR</span>
+            <span className="text-blue-600 font-bold text-lg sm:text-xl print:text-lg">JD</span>
           </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 print:text-3xl print:text-gray-800">MACHINE RENTAL BILL</h1>
-        <p className="text-lg sm:text-xl text-blue-100 print:text-gray-600">Professional Equipment Rental Services</p>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 print:text-3xl print:text-gray-800">JD Agro & Earthmovers BILL</h1>
+        <p className="text-lg sm:text-xl text-blue-100 print:text-gray-600">Professional Agro & Earthmovers Rental Services</p>
         <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-blue-100 print:text-gray-500">
-          <p>123 Industrial Road, Tech City - 500001</p>
-          <p>Phone: +91-9876543210 | Email: info@machinerental.com</p>
+          <p>Tuljapur, Dist- Dharashiv - 413601</p>
+          <p>Phone: +91-7558379410 | Email: shubhamja3333@gmail.com</p>
         </div>
       </div>
 
@@ -131,6 +160,7 @@ const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint })
           <div className="space-y-1 sm:space-y-2">
             <p className="text-base sm:text-lg"><span className="font-semibold">Bill No:</span> {bill.billNumber}</p>
             <p className="text-base sm:text-lg"><span className="font-semibold">Date:</span> {formatDateDDMMYYYY(bill.createdAt)}</p>
+            {bill.dueDate && <p className="text-base sm:text-lg"><span className="font-semibold">Due Date:</span> {formatDateDDMMYYYY(bill.dueDate)}</p>}
             <p className="text-base sm:text-lg"><span className="font-semibold">Operator:</span> {bill.rentals[0]?.operator.name || 'N/A'}</p>
           </div>
         </div>
@@ -156,10 +186,32 @@ const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint })
                     {getRentalDescription(rental)}
                   </td>
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
-                    {rental.unitType === 'hourly' && rental.machineType === 'excavator' ?
-                      `${rental.timeSlots?.filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + (new Date(`2000-01-01T${slot.endTime}:00`).getTime() - new Date(`2000-01-01T${slot.startTime}:00`).getTime()) / (1000 * 60 * 60), 0).toFixed(2)} + ${rental.timeSlots?.filter(slot => slot.isBreaker).reduce((sum, slot) => sum + (new Date(`2000-01-01T${slot.endTime}:00`).getTime() - new Date(`2000-01-01T${slot.startTime}:00`).getTime()) / (1000 * 60 * 60), 0).toFixed(2)} hrs` :
+                    {rental.unitType === 'hourly' && rental.machineType === 'excavator' ? (
+                      <div className="flex flex-col items-center space-y-1">
+                        <div className="text-xs text-gray-600">
+                          {(() => {
+                            const normalSlots = rental.timeSlots?.filter(slot => !slot.isBreaker) || [];
+                            const normalHours = normalSlots.length > 0 ? normalSlots.reduce((sum, slot) => {
+                              const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
+                              return sum + hours;
+                            }, 0) : 0;
+                            return normalHours.toFixed(2);
+                          })()} hrs (Normal)
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {(() => {
+                            const breakerSlots = rental.timeSlots?.filter(slot => slot.isBreaker) || [];
+                            const breakerHours = breakerSlots.length > 0 ? breakerSlots.reduce((sum, slot) => {
+                              const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
+                              return sum + hours;
+                            }, 0) : 0;
+                            return breakerHours.toFixed(2);
+                          })()} hrs (Breaker)
+                        </div>
+                      </div>
+                    ) : (
                       `${rental.quantity} ${rental.unitType}`
-                    }
+                    )}
                   </td>
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
                     {rental.unitType === 'hourly' && rental.machineType === 'excavator' ?

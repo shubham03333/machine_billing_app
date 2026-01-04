@@ -34,10 +34,19 @@ export async function GET(request: NextRequest) {
       take: limit
     });
 
+    // Parse timeSlots JSON for each rental in each bill
+    const billsWithParsedTimeSlots = bills.map(bill => ({
+      ...bill,
+      rentals: bill.rentals.map(rental => ({
+        ...rental,
+        timeSlots: rental.timeSlots ? (typeof rental.timeSlots === 'string' ? JSON.parse(rental.timeSlots) : rental.timeSlots) : []
+      }))
+    }));
+
     const total = await prisma.bill.count({ where });
 
     return NextResponse.json({
-      bills,
+      bills: billsWithParsedTimeSlots,
       pagination: {
         page,
         limit,

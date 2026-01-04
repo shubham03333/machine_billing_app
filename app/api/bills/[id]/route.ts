@@ -38,7 +38,16 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(bill);
+    // Parse timeSlots JSON for each rental
+    const billWithParsedTimeSlots = {
+      ...bill,
+      rentals: bill.rentals.map(rental => ({
+        ...rental,
+        timeSlots: rental.timeSlots ? (typeof rental.timeSlots === 'string' ? JSON.parse(rental.timeSlots) : rental.timeSlots) : []
+      }))
+    };
+
+    return NextResponse.json(billWithParsedTimeSlots);
   } catch (error) {
     console.error('Error fetching bill:', error);
     return NextResponse.json(

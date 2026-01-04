@@ -2343,6 +2343,7 @@ if (user.role === 'admin') {
               setSelectedRentalsForBill([])
               setBillDetails(null)
             }}
+            onPrint={() => window.print()}
           />
         ) : null}
       </div>
