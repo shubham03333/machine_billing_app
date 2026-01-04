@@ -125,6 +125,28 @@ const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint })
   const totalPaid = bill.paidAmount || getAllPayments().reduce((sum, payment) => sum + payment.amount, 0)
   const balanceDue = bill.totalAmount - totalPaid
 
+  const shareBillOnWhatsApp = () => {
+    const customerPhone = bill.customer.contactNumber.replace(/\D/g, '') // Remove non-numeric characters
+    const billText = `*JD Agro & Earthmovers Bill*
+
+Bill No: ${bill.billNumber}
+Customer: ${bill.customer.name}
+Date: ${formatDateDDMMYYYY(bill.createdAt)}
+${bill.dueDate ? `Due Date: ${formatDateDDMMYYYY(bill.dueDate)}\n` : ''}
+*Total Amount:* ₹${bill.totalAmount.toLocaleString('en-IN')}
+*Paid Amount:* ₹${totalPaid.toLocaleString('en-IN')}
+*Balance Due:* ₹${balanceDue.toLocaleString('en-IN')}
+
+*Rental Details:*
+${bill.rentals.map(rental => `- ${getRentalDescription(rental)}: ₹${rental.totalAmount.toLocaleString('en-IN')}`).join('\n')}
+
+Thank you for your business!
+Contact: +91-7558379410`
+
+    const whatsappUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(billText)}`
+    window.open(whatsappUrl, '_blank')
+  }
+
   return (
     <div className="w-full max-w-4xl mx-auto bg-white p-4 sm:p-6 lg:p-8 shadow-xl print:shadow-none print:p-4 border border-gray-200 print:border-none">
       {/* Enhanced Header */}
@@ -302,17 +324,24 @@ const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint })
       </div>
 
       {/* Enhanced Professional Buttons */}
-      <div className="flex justify-center gap-6 print:hidden mt-8">
+      <div className="flex flex-wrap justify-center gap-4 sm:gap-6 print:hidden mt-8">
         <button
           onClick={onPrint}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
         >
           <span>🖨️</span>
           Print Bill
         </button>
         <button
+          onClick={shareBillOnWhatsApp}
+          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+        >
+          <span>📱</span>
+          Share on WhatsApp
+        </button>
+        <button
           onClick={onClose}
-          className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+          className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
         >
           <span>✕</span>
           Close

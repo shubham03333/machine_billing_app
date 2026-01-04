@@ -2343,7 +2343,38 @@ if (user.role === 'admin') {
               setSelectedRentalsForBill([])
               setBillDetails(null)
             }}
-            onPrint={() => window.print()}
+            onPrint={() => {
+              // Open bill in new window for printing to avoid modal conflicts
+              const printWindow = window.open('', '_blank', 'width=800,height=600')
+              if (printWindow) {
+                printWindow.document.write(`
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <title>Bill - ${billDetails.billNumber}</title>
+                      <style>
+                        @media print {
+                          body { margin: 0; }
+                          .no-print { display: none; }
+                        }
+                        body { font-family: Arial, sans-serif; }
+                      </style>
+                    </head>
+                    <body>
+                      <div id="bill-content"></div>
+                      <script>
+                        // Load the bill content
+                        setTimeout(() => {
+                          window.print();
+                          window.close();
+                        }, 500);
+                      </script>
+                    </body>
+                  </html>
+                `);
+                printWindow.document.close();
+              }
+            }}
           />
         ) : null}
       </div>
