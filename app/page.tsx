@@ -291,6 +291,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [additionalAmount, setAdditionalAmount] = useState('')
   const [additionalPaymentMode, setAdditionalPaymentMode] = useState('Cash')
   const [billDetails, setBillDetails] = useState<any>(null)
+  const [billLoading, setBillLoading] = useState(false)
   const [showBillModal, setShowBillModal] = useState(false)
   const [selectedRentalsForBill, setSelectedRentalsForBill] = useState<Rental[]>([])
   const [billDueDate, setBillDueDate] = useState('')
@@ -960,7 +961,14 @@ const getExpenseCategory = (expense: Expense) => {
     return sum + (rental.totalAmount - (rental.paidAmount || 0))
   }, 0)
 
-  const totalQuantity = filteredRentals.reduce((sum, rental) => sum + rental.quantity, 0)
+  const totalAcre = filteredRentals.reduce((sum, rental) => {
+    if (rental.unitType === 'acre') {
+      return sum + rental.quantity;
+    } else if (rental.unitType === 'guntha') {
+      return sum + (rental.quantity / 40);
+    }
+    return sum;
+  }, 0)
 
 if (user.role === 'admin') {
   return (
@@ -1020,6 +1028,16 @@ if (user.role === 'admin') {
             >
               Customers
             </button>
+            <button
+              onClick={() => setAdminActiveTab('bills')}
+              className={`px-1 py-1 sm:px-2 sm:py-2 md:px-4 rounded-lg font-medium text-xs sm:text-sm md:text-base ${
+                adminActiveTab === 'bills'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Bills
+            </button>
           </div>
 
           {adminActiveTab === 'overview' && (
@@ -1062,9 +1080,9 @@ if (user.role === 'admin') {
                   </p>
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold mb-2">Total Quantity</h3>
+                  <h3 className="text-lg font-semibold mb-2">Total Acre</h3>
                   <p className="text-3xl font-bold text-blue-600">
-                    {totalQuantity.toFixed(2)}
+                    {totalAcre.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -1179,25 +1197,35 @@ if (user.role === 'admin') {
                           <td className="px-2 py-2 whitespace-nowrap">
                             <div className="flex gap-1">
                               <button
-                                onClick={() => startEditRental(rental)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  startEditRental(rental)
+                                }}
                                 className="text-blue-600 hover:text-blue-900"
                               >
                                 <Edit size={14} />
                               </button>
                               <button
-                                onClick={() => setPaymentRental(rental)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setPaymentRental(rental)
+                                }}
                                 className="text-green-600 hover:text-green-900"
                               >
                                 <IndianRupee size={14} />
                               </button>
                               <button
-                                onClick={() => setSelectedRentalForBreakdown(rental)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedRentalForBreakdown(rental)
+                                }}
                                 className="text-purple-600 hover:text-purple-900"
                               >
                                 <BarChart3 size={14} />
                               </button>
     <button
-      onClick={() => {
+      onClick={(e) => {
+        e.stopPropagation()
         setSelectedRentalsForBill([rental])
         setShowBillModal(true)
       }}
@@ -1207,7 +1235,10 @@ if (user.role === 'admin') {
       <FileText size={14} />
     </button>
                               <button
-                                onClick={() => deleteRental(rental.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  deleteRental(rental.id)
+                                }}
                                 className="text-red-600 hover:text-red-900"
                               >
                                 <Trash2 size={14} />
@@ -2244,6 +2275,128 @@ if (user.role === 'admin') {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bill Modal */}
+      {showBillModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Bill Details</h2>
+              <button
+                onClick={() => {
+                  setShowBillModal(false)
+                  setSelectedRentalsForBill([])
+                  setBillDetails(null)
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {billDetails ? (
+                <div className="space-y-6">
+                  {/* Bill Header */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h3 className="font-semibold text-lg mb-2">Bill Information</h3>
+                        <p><strong>Bill ID:</strong> {billDetails.id}</p>
+                        <p><strong>Date:</strong> {formatDateDDMMYYYY(billDetails.date)}</p>
+                        <p><strong>Due Date:</strong> {billDueDate ? formatDateDDMMYYYY(billDueDate) : 'N/A'}</p>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg mb-2">Customer Details</h3>
+                        <p><strong>Name:</strong> {billDetails.customer?.name}</p>
+                        <p><strong>Contact:</strong> {billDetails.customer?.contactNumber}</p>
+                        <p><strong>Address:</strong> {billDetails.customer?.address || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rentals in Bill */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-4">Rentals Included</h3>
+                    <div className="space-y-4">
+                      {billDetails.rentals?.map((rental: Rental) => (
+                        <div key={rental.id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                              <span className="font-medium text-gray-700">Date:</span>
+                              <div>{formatDateDDMMYYYY(rental.date)}</div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700">Machine:</span>
+                              <div className="capitalize">{rental.machineType}</div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700">Quantity:</span>
+                              <div>{rental.quantity} {rental.unitType}</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <span className="font-medium text-gray-700">Operator:</span>
+                              <div>{rental.operator.name}</div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700">Amount:</span>
+                              <div className="text-green-600 font-semibold">{formatCurrency(rental.totalAmount)}</div>
+                            </div>
+                          </div>
+                          {rental.description && (
+                            <div className="mb-4">
+                              <span className="font-medium text-gray-700">Description:</span>
+                              <div className="mt-1">{rental.description}</div>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-gray-700">Diesel Cost:</span>
+                              <div className="text-red-600">{formatCurrency(rental.dieselCost)}</div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700">Maintenance Cost:</span>
+                              <div className="text-red-600">{formatCurrency(rental.maintenanceCost)}</div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700">Operator Salary:</span>
+                              <div className="text-red-600">{formatCurrency(rental.operatorSalary)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Bill Summary */}
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-lg mb-4">Bill Summary</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Total Amount:</span>
+                        <span className="font-semibold text-green-600">{formatCurrency(billDetails.totalAmount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Paid Amount:</span>
+                        <span className="font-semibold text-green-600">{formatCurrency(billDetails.paidAmount || 0)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span>Pending Amount:</span>
+                        <span className="font-semibold text-red-600">{formatCurrency(billDetails.totalAmount - (billDetails.paidAmount || 0))}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Loading bill details...</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
