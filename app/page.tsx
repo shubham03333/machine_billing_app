@@ -1526,6 +1526,12 @@ if (user.role === 'admin') {
                     <RefreshCw size={16} />
                     Refresh
                   </button>
+                  <button
+                    onClick={exportExpensesToCSV}
+                    className="flex items-center gap-2 px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 whitespace-nowrap"
+                  >
+                    Export to CSV
+                  </button>
                   <input
                     type="date"
                     value={expenseFilter.dateFrom}
