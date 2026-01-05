@@ -3100,6 +3100,15 @@ if (user.role === 'admin') {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Date</label>
+                <input
+                  type="date"
+                  value={expenseDate}
+                  onChange={(e) => setExpenseDate(e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Diesel Cost (Optional)</label>
@@ -3186,21 +3195,25 @@ if (user.role === 'admin') {
                       <div className="font-medium capitalize">{rental.machineType}</div>
                       <div className="font-semibold text-green-600">{formatCurrency(rental.totalAmount)}</div>
                     </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div>Customer: {rental.customer.name} ({rental.customer.contactNumber})</div>
-                      <div>Location: {rental.customer.address || 'N/A'}</div>
-                      <div>Date: {new Date(rental.date).toLocaleDateString()}</div>
-                      {rental.machineType === 'excavator' && rental.unitType === 'hourly' ? (
-                        <div>
-                          JCB: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0).toFixed(2)} hr @ ₹{rental.normalHourlyRate}
-                          <br />
-                          Breaker: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0).toFixed(2)} hr @ ₹{rental.breakerHourlyRate}
-                        </div>
-                      ) : (
-                        <div>Quantity: {rental.quantity} {rental.unitType}</div>
-                      )}
-                      {(rental as any).description && <div>Description: {(rental as any).description}</div>}
-                    </div>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>Customer: {rental.customer.name} ({rental.customer.contactNumber})</div>
+              <div>Location: {rental.customer.address || 'N/A'}</div>
+              <div>Date: {new Date(rental.date).toLocaleDateString()}</div>
+              {rental.machineType === 'excavator' && rental.unitType === 'hourly' ? (
+                <div>
+                  JCB: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0).toFixed(2)} hr @ ₹{rental.normalHourlyRate}
+                  <br />
+                  Breaker: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0).toFixed(2)} hr @ ₹{rental.breakerHourlyRate}
+                </div>
+              ) : (
+                <div>Quantity: {rental.quantity} {rental.unitType}</div>
+              )}
+              <div className="flex justify-between">
+              {(rental as any).description && <div>Description: {(rental as any).description}</div>}
+                <span>Paid: <span className="text-green-600 font-medium">{formatCurrency(rental.paidAmount || 0)}</span></span>
+                <span>Pending: <span className="text-red-600 font-medium">{formatCurrency(rental.totalAmount - (rental.paidAmount || 0))}</span></span>
+              </div>
+            </div>
                   </div>
                 ))}
             </div>
