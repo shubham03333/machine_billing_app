@@ -265,9 +265,9 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [showEditRates, setShowEditRates] = useState(false)
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [customerSearch, setCustomerSearch] = useState('')
-  const [activeTab, setActiveTab] = useState('new-rental')
+  const [activeTab, setActiveTab] = useState<'new-rental' | 'expenses' | 'rentals'>('new-rental')
   const [selectedRentalId, setSelectedRentalId] = useState<number | null>(null)
-  const [adminActiveTab, setAdminActiveTab] = useState('overview')
+  const [adminActiveTab, setAdminActiveTab] = useState<'overview' | 'add-expense' | 'expenses' | 'customers' | 'bills'>('overview')
   const [expenseFilter, setExpenseFilter] = useState({
     dateFrom: '',
     dateTo: '',
@@ -3042,6 +3042,10 @@ if (user.role === 'admin') {
                       <div>Date: {new Date(rental.date).toLocaleDateString()}</div>
                       <div>Quantity: {rental.quantity} {rental.unitType}</div>
                       {rental.description && <div>Description: {rental.description}</div>}
+                      <div className="flex justify-between pt-2 border-t">
+                        <span>Paid: <span className="text-green-600 font-medium">{formatCurrency(rental.paidAmount || 0)}</span></span>
+                        <span>Pending: <span className="text-red-600 font-medium">{formatCurrency(rental.totalAmount - (rental.paidAmount || 0))}</span></span>
+                      </div>
                     </div>
                   </div>
                 ))}
