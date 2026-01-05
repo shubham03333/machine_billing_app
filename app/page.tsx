@@ -357,11 +357,11 @@ const [rentalFilter, setRentalFilter] = useState({
     additionalAmount: '',
     additionalPaymentMode: 'Cash',
     date: '',
-    normalHours: '',
-    breakerHours: '',
     normalHourlyRate: '',
     breakerHourlyRate: '',
-    timeSlots: [] as {start: string, end: string, isBreaker: boolean, calculatedAmount: number}[]
+    timeSlots: [] as {start: string, end: string, isBreaker: boolean, calculatedAmount: number}[],
+    normalHours: '',
+    breakerHours: ''
   })
   const [originalPaidAmount, setOriginalPaidAmount] = useState(0)
   const [paidAmountError, setPaidAmountError] = useState('')
@@ -654,8 +654,9 @@ const fetchOperators = async () => {
         timeSlots = []
       }
     }
-    const normalHours = timeSlots ? timeSlots.filter((s: any) => !s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.startTime, s.endTime), 0).toString() : '0'
-    const breakerHours = timeSlots ? timeSlots.filter((s: any) => s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.startTime, s.endTime), 0).toString() : '0'
+    const mappedTimeSlots = timeSlots ? timeSlots.map((slot: any) => ({ start: slot.startTime || slot.start, end: slot.endTime || slot.end, isBreaker: slot.isBreaker, calculatedAmount: slot.calculatedAmount })) : []
+    const normalHours = mappedTimeSlots.filter((s: any) => !s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.start, s.end), 0).toString()
+    const breakerHours = mappedTimeSlots.filter((s: any) => s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.start, s.end), 0).toString()
     setEditRentalData({
       machineType: rental.machineType,
       unitType: rental.unitType,
@@ -680,7 +681,7 @@ const fetchOperators = async () => {
       breakerHours,
       normalHourlyRate: rental.normalHourlyRate ? rental.normalHourlyRate.toString() : '',
       breakerHourlyRate: rental.breakerHourlyRate ? rental.breakerHourlyRate.toString() : '',
-      timeSlots: timeSlots ? timeSlots.map((slot: any) => ({ start: slot.startTime, end: slot.endTime, isBreaker: slot.isBreaker, calculatedAmount: slot.calculatedAmount })) : []
+      timeSlots: mappedTimeSlots
     })
     setEditingRental(rental)
   }
@@ -3228,7 +3229,7 @@ if (user.role === 'admin') {
                     .slice(0, 3)
                     .map((expense) => (
                       <div key={expense.id} className="p-4 bg-gray-50 rounded-lg">
-          <div className="flex justify-between items-start mb-2">
+                       <div className="flex justify-between items-start mb-2">
                           <div className="font-medium">{expense.description}</div>
                           <div className="font-semibold text-red-600">{formatCurrency(expense.amount)}</div>
                         </div>
@@ -3261,13 +3262,28 @@ if (user.role === 'admin') {
               <div>Customer: {rental.customer.name} ({rental.customer.contactNumber})</div>
               <div>Location: {rental.customer.address || 'N/A'}</div>
               <div>Date: {new Date(rental.date).toLocaleDateString()}</div>
-              {rental.machineType === 'excavator' && rental.unitType === 'hourly' ? (
-                <div>
-                  JCB: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0).toFixed(2)} hr @ ₹{rental.normalHourlyRate}
-                  <br />
-                  Breaker: {(Array.isArray(rental.timeSlots) ? rental.timeSlots : []).filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime, slot.endTime), 0).toFixed(2)} hr @ ₹{rental.breakerHourlyRate}
-                </div>
-              ) : (
+              {rental.machineType === 'excavator' && rental.unitType === 'hourly' ? (() => {
+                let slots = rental.timeSlots;
+                if (typeof slots === 'string') {
+                  try {
+                    slots = JSON.parse(slots);
+                  } catch (e) {
+                    slots = [];
+                  }
+                }
+                if (Array.isArray(slots)) {
+                  const jcbHours = slots.filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime || slot.start, slot.endTime || slot.end), 0);
+                  const breakerHours = slots.filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime || slot.start, slot.endTime || slot.end), 0);
+                  return (
+                    <div>
+                      JCB: {jcbHours.toFixed(2)} hr @ ₹{rental.normalHourlyRate}
+                      <br />
+                      Breaker: {breakerHours.toFixed(2)} hr @ ₹{rental.breakerHourlyRate}
+                    </div>
+                  );
+                }
+                return <div>Quantity: {rental.quantity} {rental.unitType}</div>;
+              })() : (
                 <div>Quantity: {rental.quantity} {rental.unitType}</div>
               )}
               <div className="flex justify-between">

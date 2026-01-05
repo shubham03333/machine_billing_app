@@ -199,9 +199,15 @@ Contact: +91-7558379410`
               <div className="font-medium text-gray-800 mb-2">{getRentalDescription(rental)}</div>
               <div className="flex justify-between items-center text-sm">
                 <div className="text-gray-600">
-                  Quantity: {rental.unitType === 'hourly' && rental.machineType === 'excavator' ? (
-                    <div className="text-xs">
-                      {(() => {
+                  <div className="text-xs">
+                    Rate: {rental.unitType === 'hourly' && rental.machineType === 'excavator' ?
+                      `₹${rental.normalHourlyRate}/₹${rental.breakerHourlyRate}` :
+                      `₹${rental.pricePerUnit.toLocaleString('en-IN')}`
+                    }
+                  </div>
+                  {rental.unitType === 'hourly' && rental.machineType === 'excavator' && (
+                    <div className="text-xs mt-1">
+                      Hours: {(() => {
                         const normalSlots = rental.timeSlots?.filter(slot => !slot.isBreaker) || [];
                         const normalHours = normalSlots.length > 0 ? normalSlots.reduce((sum, slot) => {
                           const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
@@ -217,8 +223,11 @@ Contact: +91-7558379410`
                         return breakerHours.toFixed(2);
                       })()} hrs (Breaker)
                     </div>
-                  ) : (
-                    `${rental.quantity} ${rental.unitType}`
+                  )}
+                  {!(rental.unitType === 'hourly' && rental.machineType === 'excavator') && (
+                    <div className="text-xs">
+                      Quantity: {rental.quantity} {rental.unitType}
+                    </div>
                   )}
                 </div>
                 <div className="font-bold text-gray-900">{formatCurrency(rental.totalAmount)}</div>
@@ -239,50 +248,77 @@ Contact: +91-7558379410`
               </tr>
             </thead>
             <tbody>
-              {bill.rentals.map((rental, index) => (
-                <tr key={rental.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} hover:bg-blue-25 transition-colors duration-150`}>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 border-b border-gray-100 font-medium">
-                    {getRentalDescription(rental)}
-                  </td>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
-                    {rental.unitType === 'hourly' && rental.machineType === 'excavator' ? (
-                      <div className="flex flex-col items-center space-y-1">
-                        <div className="text-xs text-gray-600">
-                          {(() => {
-                            const normalSlots = rental.timeSlots?.filter(slot => !slot.isBreaker) || [];
-                            const normalHours = normalSlots.length > 0 ? normalSlots.reduce((sum, slot) => {
-                              const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
-                              return sum + hours;
-                            }, 0) : 0;
-                            return normalHours.toFixed(2);
-                          })()} hrs (Normal)
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {(() => {
-                            const breakerSlots = rental.timeSlots?.filter(slot => slot.isBreaker) || [];
-                            const breakerHours = breakerSlots.length > 0 ? breakerSlots.reduce((sum, slot) => {
-                              const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
-                              return sum + hours;
-                            }, 0) : 0;
-                            return breakerHours.toFixed(2);
-                          })()} hrs (Breaker)
-                        </div>
-                      </div>
-                    ) : (
-                      `${rental.quantity} ${rental.unitType}`
-                    )}
-                  </td>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
-                    {rental.unitType === 'hourly' && rental.machineType === 'excavator' ?
-                      `₹${rental.normalHourlyRate}/₹${rental.breakerHourlyRate}` :
-                      `₹${rental.pricePerUnit.toLocaleString('en-IN')}`
-                    }
-                  </td>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center font-bold text-gray-900 border-b border-gray-100">
-                    {formatCurrency(rental.totalAmount)}
-                  </td>
-                </tr>
-              ))}
+              {bill.rentals.map((rental, index) => {
+                if (rental.unitType === 'hourly' && rental.machineType === 'excavator') {
+                  const normalSlots = rental.timeSlots?.filter(slot => !slot.isBreaker) || [];
+                  const normalHours = normalSlots.length > 0 ? normalSlots.reduce((sum, slot) => {
+                    const hours = slot.calculatedAmount ? slot.calculatedAmount / (rental.normalHourlyRate || 1) : calculateHours(slot.startTime, slot.endTime);
+                    return sum + hours;
+                  }, 0) : 0;
+                  const normalAmount = normalHours * (rental.normalHourlyRate || 0);
+
+                  const breakerSlots = rental.timeSlots?.filter(slot => slot.isBreaker) || [];
+                  const breakerHours = breakerSlots.length > 0 ? breakerSlots.reduce((sum, slot) => {
+                    const hours = slot.calculatedAmount ? slot.calculatedAmount / (rental.breakerHourlyRate || 1) : calculateHours(slot.startTime, slot.endTime);
+                    return sum + hours;
+                  }, 0) : 0;
+                  const breakerAmount = breakerHours * (rental.breakerHourlyRate || 0);
+
+                  return (
+                    <React.Fragment key={rental.id}>
+                      {normalHours > 0 && (
+                        <tr className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} hover:bg-blue-25 transition-colors duration-150`}>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 border-b border-gray-100 font-medium">
+                            JCB (Normal){rental.description ? ` (${rental.description})` : ''}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                            {normalHours.toFixed(2)} hrs
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                            ₹{rental.normalHourlyRate?.toLocaleString('en-IN') || 'N/A'}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center font-bold text-gray-900 border-b border-gray-100">
+                            {formatCurrency(normalAmount)}
+                          </td>
+                        </tr>
+                      )}
+                      {breakerHours > 0 && (
+                        <tr className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} hover:bg-blue-25 transition-colors duration-150`}>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 border-b border-gray-100 font-medium">
+                            JCB (Breaker){rental.description ? ` (${rental.description})` : ''}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                            {breakerHours.toFixed(2)} hrs
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                            ₹{rental.breakerHourlyRate?.toLocaleString('en-IN') || 'N/A'}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center font-bold text-gray-900 border-b border-gray-100">
+                            {formatCurrency(breakerAmount)}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                } else {
+                  return (
+                    <tr key={rental.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} hover:bg-blue-25 transition-colors duration-150`}>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 border-b border-gray-100 font-medium">
+                        {getRentalDescription(rental)}
+                      </td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                        {`${rental.quantity} ${rental.unitType}`}
+                      </td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                        ₹{rental.pricePerUnit.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center font-bold text-gray-900 border-b border-gray-100">
+                        {formatCurrency(rental.totalAmount)}
+                      </td>
+                    </tr>
+                  );
+                }
+              })}
             </tbody>
           </table>
         </div>
