@@ -242,6 +242,7 @@ Contact: +91-7558379410`
             <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
               <tr>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Description</th>
+                <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Time Slot</th>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Quantity</th>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Rate</th>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Amount</th>
@@ -272,6 +273,13 @@ Contact: +91-7558379410`
                             JCB (Normal){rental.description ? ` (${rental.description})` : ''}
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                            {normalSlots.map((slot, idx) => (
+                              <div key={idx} className="text-xs">
+                                {slot.startTime} - {slot.endTime}
+                              </div>
+                            ))}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
                             {normalHours.toFixed(2)} hrs
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
@@ -286,6 +294,13 @@ Contact: +91-7558379410`
                         <tr className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} hover:bg-blue-25 transition-colors duration-150`}>
                           <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 border-b border-gray-100 font-medium">
                             JCB (Breaker){rental.description ? ` (${rental.description})` : ''}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                            {breakerSlots.map((slot, idx) => (
+                              <div key={idx} className="text-xs">
+                                {slot.startTime} - {slot.endTime}
+                              </div>
+                            ))}
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
                             {breakerHours.toFixed(2)} hrs
@@ -305,6 +320,9 @@ Contact: +91-7558379410`
                     <tr key={rental.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} hover:bg-blue-25 transition-colors duration-150`}>
                       <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 border-b border-gray-100 font-medium">
                         {getRentalDescription(rental)}
+                      </td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                        N/A
                       </td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
                         {`${rental.quantity} ${rental.unitType}`}
