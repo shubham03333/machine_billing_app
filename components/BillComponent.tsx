@@ -157,8 +157,8 @@ Contact: +91-7558379410`
             <span className="text-blue-600 font-bold text-lg sm:text-xl print:text-lg">JD</span>
           </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 print:text-3xl print:text-gray-800">JD Agro & Earthmovers BILL</h1>
-        <p className="text-lg sm:text-xl text-blue-100 print:text-gray-600">Professional Agro & Earthmovers Rental Services</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 print:text-2xl print:text-gray-800">JD Agro & Earthmovers BILL</h1>
+        <p className="text-base sm:text-lg text-blue-100 print:text-gray-600">Professional Agro & Earthmovers Rental Services</p>
         <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-blue-100 print:text-gray-500">
           <p>Tuljapur, Dist- Dharashiv - 413601</p>
           <p>Phone: +91-7558379410 | Email: shubhamja3333@gmail.com</p>
@@ -169,28 +169,28 @@ Contact: +91-7558379410`
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
         {/* Left Side - Bill To */}
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800">Bill To:</h2>
-          <div className="space-y-1 sm:space-y-2">
-            <p className="text-base sm:text-lg font-medium">{bill.customer.name}</p>
-            <p className="text-sm sm:text-base text-gray-600">{bill.customer.address || 'N/A'}</p>
-            <p className="text-sm sm:text-base text-gray-600">Phone: {bill.customer.contactNumber}</p>
+          <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-gray-800">Bill To:</h2>
+          <div className="space-y-1">
+            <p className="text-sm sm:text-base font-medium">{bill.customer.name}</p>
+            <p className="text-xs sm:text-sm text-gray-600">{bill.customer.address || 'N/A'}</p>
+            <p className="text-xs sm:text-sm text-gray-600">Phone: {bill.customer.contactNumber}</p>
           </div>
         </div>
 
         {/* Right Side - Bill Info */}
         <div className="text-left sm:text-right">
-          <div className="space-y-1 sm:space-y-2">
-            <p className="text-base sm:text-lg"><span className="font-semibold">Bill No:</span> {bill.billNumber}</p>
-            <p className="text-base sm:text-lg"><span className="font-semibold">Date:</span> {formatDateDDMMYYYY(bill.createdAt)}</p>
-            {bill.dueDate && <p className="text-base sm:text-lg"><span className="font-semibold">Due Date:</span> {formatDateDDMMYYYY(bill.dueDate)}</p>}
-            <p className="text-base sm:text-lg"><span className="font-semibold">Operator:</span> {bill.rentals[0]?.operator.name || 'N/A'}</p>
+          <div className="space-y-1">
+            <p className="text-sm sm:text-base"><span className="font-semibold">Bill No:</span> {bill.billNumber}</p>
+            <p className="text-sm sm:text-base"><span className="font-semibold">Date:</span> {formatDateDDMMYYYY(bill.createdAt)}</p>
+            {bill.dueDate && <p className="text-sm sm:text-base"><span className="font-semibold">Due Date:</span> {formatDateDDMMYYYY(bill.dueDate)}</p>}
+            <p className="text-sm sm:text-base"><span className="font-semibold">Operator:</span> {bill.rentals[0]?.operator.name || 'N/A'}</p>
           </div>
         </div>
       </div>
 
       {/* Enhanced Rental Details */}
       <div className="mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800 border-b-2 border-blue-200 pb-2">Rental Details</h2>
+        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-800 border-b-2 border-blue-200 pb-2">Rental Details</h2>
 
         {/* Mobile Layout: Cards */}
         <div className="block sm:hidden space-y-4">
@@ -210,14 +210,14 @@ Contact: +91-7558379410`
                       Hours: {(() => {
                         const normalSlots = rental.timeSlots?.filter(slot => !slot.isBreaker) || [];
                         const normalHours = normalSlots.length > 0 ? normalSlots.reduce((sum, slot) => {
-                          const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
+                          const hours = slot.calculatedAmount ? slot.calculatedAmount / (rental.normalHourlyRate || 1) : calculateHours(slot.startTime, slot.endTime);
                           return sum + hours;
                         }, 0) : 0;
                         return normalHours.toFixed(2);
                       })()} hrs (Normal), {(() => {
                         const breakerSlots = rental.timeSlots?.filter(slot => slot.isBreaker) || [];
                         const breakerHours = breakerSlots.length > 0 ? breakerSlots.reduce((sum, slot) => {
-                          const hours = slot.calculatedAmount || calculateHours(slot.startTime, slot.endTime);
+                          const hours = slot.calculatedAmount ? slot.calculatedAmount / (rental.breakerHourlyRate || 1) : calculateHours(slot.startTime, slot.endTime);
                           return sum + hours;
                         }, 0) : 0;
                         return breakerHours.toFixed(2);
@@ -344,63 +344,63 @@ Contact: +91-7558379410`
 
       {/* Enhanced Summary Section */}
       <div className="mb-8 sm:mb-10">
-        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800 border-b-2 border-blue-200 pb-2">Payment Summary</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-800 border-b-2 border-blue-200 pb-2">Payment Summary</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Total Amount Card */}
-          <div className="bg-gradient-to-br from-emerald-50 to-green-100 p-4 sm:p-6 rounded-xl border-2 border-emerald-200 shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-base sm:text-lg font-bold text-emerald-800">Total Amount</p>
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-xs sm:text-sm">₹</span>
+          <div className="bg-gradient-to-br from-emerald-50 to-green-100 p-3 sm:p-4 rounded-xl border-2 border-emerald-200 shadow-lg">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm sm:text-base font-bold text-emerald-800">Total Amount</p>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xs">₹</span>
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl font-bold text-emerald-700">{formatCurrency(bill.totalAmount)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-emerald-700">{formatCurrency(bill.totalAmount)}</p>
           </div>
 
           {/* Total Paid Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6 rounded-xl border-2 border-blue-200 shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-base sm:text-lg font-bold text-blue-800">Total Paid</p>
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-xs sm:text-sm">✓</span>
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-3 sm:p-4 rounded-xl border-2 border-blue-200 shadow-lg">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm sm:text-base font-bold text-blue-800">Total Paid</p>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xs">✓</span>
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl font-bold text-blue-700">{formatCurrency(totalPaid)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-blue-700">{formatCurrency(totalPaid)}</p>
           </div>
 
           {/* Balance Due Card */}
-          <div className={`p-4 sm:p-6 rounded-xl border-2 shadow-lg ${balanceDue > 0 ? 'bg-gradient-to-br from-red-50 to-pink-100 border-red-200' : 'bg-gradient-to-br from-gray-50 to-slate-100 border-gray-200'}`}>
-            <div className="flex items-center justify-between mb-2">
-              <p className={`text-base sm:text-lg font-bold ${balanceDue > 0 ? 'text-red-800' : 'text-gray-800'}`}>Balance Due</p>
-              <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${balanceDue > 0 ? 'bg-red-500' : 'bg-gray-500'}`}>
-                <span className="text-white font-bold text-xs sm:text-sm">{balanceDue > 0 ? '!' : '✓'}</span>
+          <div className={`p-3 sm:p-4 rounded-xl border-2 shadow-lg ${balanceDue > 0 ? 'bg-gradient-to-br from-red-50 to-pink-100 border-red-200' : 'bg-gradient-to-br from-gray-50 to-slate-100 border-gray-200'}`}>
+            <div className="flex items-center justify-between mb-1">
+              <p className={`text-sm sm:text-base font-bold ${balanceDue > 0 ? 'text-red-800' : 'text-gray-800'}`}>Balance Due</p>
+              <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center ${balanceDue > 0 ? 'bg-red-500' : 'bg-gray-500'}`}>
+                <span className="text-white font-bold text-xs">{balanceDue > 0 ? '!' : '✓'}</span>
               </div>
             </div>
-            <p className={`text-2xl sm:text-3xl font-bold ${balanceDue > 0 ? 'text-red-700' : 'text-gray-700'}`}>{formatCurrency(balanceDue)}</p>
+            <p className={`text-xl sm:text-2xl font-bold ${balanceDue > 0 ? 'text-red-700' : 'text-gray-700'}`}>{formatCurrency(balanceDue)}</p>
           </div>
         </div>
 
         {/* Payment History */}
-        <div className="mt-6 sm:mt-8">
-          <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-800">Payment History</h3>
+        <div className="mt-4 sm:mt-6">
+          <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 text-gray-800">Payment History</h3>
           <div className="bg-white border-2 border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="max-h-32 sm:max-h-40 overflow-y-auto">
+            <div className="max-h-28 sm:max-h-32 overflow-y-auto">
               {getAllPayments().length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {getAllPayments().map((payment, index) => (
-                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-4 sm:px-6 py-3 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center space-x-3 sm:space-x-4 mb-2 sm:mb-0">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-xs sm:text-sm font-medium text-gray-700">{formatDateDDMMYYYY(payment.date)}</span>
-                        <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{payment.mode}</span>
+                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-3 sm:px-4 py-2 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center space-x-2 sm:space-x-3 mb-1 sm:mb-0">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                        <span className="text-xs font-medium text-gray-700">{formatDateDDMMYYYY(payment.date)}</span>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{payment.mode}</span>
                       </div>
-                      <span className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(payment.amount)}</span>
+                      <span className="text-sm sm:text-base font-bold text-gray-900">{formatCurrency(payment.amount)}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="px-4 sm:px-6 py-6 sm:py-8 text-center">
-                  <p className="text-gray-500 italic">No payments recorded yet</p>
+                <div className="px-3 sm:px-4 py-4 sm:py-6 text-center">
+                  <p className="text-gray-500 italic text-sm">No payments recorded yet</p>
                 </div>
               )}
             </div>
@@ -409,30 +409,30 @@ Contact: +91-7558379410`
       </div>
 
       {/* Footer */}
-      <div className="text-center mb-8 border-t border-gray-300 pt-4">
-        <p className="text-lg text-gray-700">Thank you for your business!</p>
-        <p className="text-sm text-gray-600">For any queries, please contact us.</p>
+      <div className="text-center mb-6 border-t border-gray-300 pt-3">
+        <p className="text-base text-gray-700">Thank you for your business!</p>
+        <p className="text-xs text-gray-600">For any queries, please contact us.</p>
       </div>
 
       {/* Enhanced Professional Buttons */}
-      <div className="flex flex-wrap justify-center gap-4 sm:gap-6 print:hidden mt-8">
+      <div className="flex flex-wrap justify-center gap-3 sm:gap-4 print:hidden mt-6">
         {/* <button
           onClick={onPrint}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
         >
           <span>🖨️</span>
           Print Bill
         </button> */}
         <button
           onClick={shareBillOnWhatsApp}
-          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
         >
           <span>📱</span>
           Share on WhatsApp
         </button>
         <button
           onClick={onClose}
-          className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+          className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
         >
           <span>✕</span>
           Close

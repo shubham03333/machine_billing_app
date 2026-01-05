@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         paymentMode: paymentMode || null,
         normalHourlyRate: normalHourlyRate ? parseFloat(normalHourlyRate) : null,
         breakerHourlyRate: breakerHourlyRate ? parseFloat(breakerHourlyRate) : null,
-        timeSlots: timeSlots || null,
+        timeSlots: timeSlots || undefined,
       },
       include: {
         customer: true,
@@ -136,7 +136,39 @@ export async function POST(request: NextRequest) {
         customer: true,
         operator: true,
         payments: true,
-        bill: true
+        bill: {
+          include: {
+            rentals: {
+              select: {
+                id: true,
+                machineType: true,
+                unitType: true,
+                quantity: true,
+                acreage: true,
+                pricePerUnit: true,
+                totalAmount: true,
+                description: true,
+                customerId: true,
+                operatorId: true,
+                date: true,
+                dieselCost: true,
+                maintenanceCost: true,
+                operatorSalary: true,
+                paidAmount: true,
+                paymentStatus: true,
+                paymentMode: true,
+                normalHourlyRate: true,
+                breakerHourlyRate: true,
+                timeSlots: true,
+                billId: true,
+                createdAt: true,
+                updatedAt: true,
+                operator: true,
+                payments: true
+              }
+            }
+          }
+        }
       }
     });
 

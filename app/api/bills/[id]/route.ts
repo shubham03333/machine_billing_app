@@ -23,7 +23,30 @@ export async function GET(
       include: {
         customer: true,
         rentals: {
-          include: {
+          select: {
+            id: true,
+            machineType: true,
+            unitType: true,
+            quantity: true,
+            acreage: true,
+            pricePerUnit: true,
+            totalAmount: true,
+            description: true,
+            customerId: true,
+            operatorId: true,
+            date: true,
+            dieselCost: true,
+            maintenanceCost: true,
+            operatorSalary: true,
+            paidAmount: true,
+            paymentStatus: true,
+            paymentMode: true,
+            normalHourlyRate: true,
+            breakerHourlyRate: true,
+            timeSlots: true,
+            billId: true,
+            createdAt: true,
+            updatedAt: true,
             operator: true,
             payments: true
           }
