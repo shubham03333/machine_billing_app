@@ -366,13 +366,23 @@ const [rentalFilter, setRentalFilter] = useState({
   const [originalPaidAmount, setOriginalPaidAmount] = useState(0)
   const [paidAmountError, setPaidAmountError] = useState('')
 
-  // Auto-calculate total amount when quantity or price per unit changes
+  // Auto-calculate total amount when quantity, price per unit, machine type, or unit type changes
   useEffect(() => {
     const quantity = parseFloat(editRentalData.quantity) || 0
-    const pricePerUnit = parseFloat(editRentalData.pricePerUnit) || 0
+    let pricePerUnit = parseFloat(editRentalData.pricePerUnit) || 0
+
+    // Update price per unit when machine type or unit type changes
+    if (editRentalData.machineType && editRentalData.unitType) {
+      const standardPrice = STANDARD_PRICES[editRentalData.machineType as keyof typeof STANDARD_PRICES]?.[editRentalData.unitType as keyof typeof STANDARD_PRICES[keyof typeof STANDARD_PRICES]]
+      if (standardPrice !== undefined) {
+        pricePerUnit = standardPrice
+      }
+    }
+
     const totalAmount = quantity * pricePerUnit
     setEditRentalData(prev => ({
       ...prev,
+      pricePerUnit: pricePerUnit.toString(),
       totalAmount: totalAmount.toString()
     }))
   }, [editRentalData.quantity, editRentalData.pricePerUnit, editRentalData.machineType, editRentalData.unitType])
@@ -644,8 +654,8 @@ const fetchOperators = async () => {
         timeSlots = []
       }
     }
-    const normalHours = timeSlots ? timeSlots.filter((s: any) => !s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.start, s.end), 0).toString() : '0'
-    const breakerHours = timeSlots ? timeSlots.filter((s: any) => s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.start, s.end), 0).toString() : '0'
+    const normalHours = timeSlots ? timeSlots.filter((s: any) => !s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.startTime, s.endTime), 0).toString() : '0'
+    const breakerHours = timeSlots ? timeSlots.filter((s: any) => s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.startTime, s.endTime), 0).toString() : '0'
     setEditRentalData({
       machineType: rental.machineType,
       unitType: rental.unitType,
@@ -995,6 +1005,42 @@ const getExpenseCategory = (expense: Expense) => {
   const totalAcre = filteredRentals.reduce((sum, rental) => {
     if (rental.unitType === 'acre') {
       return sum + rental.quantity;
+    } else if (rental.unitType === 'guntha') {
+      return sum + (rental.quantity / 40);
+    }
+    return sum;
+  }, 0)
+
+  const totalJCBHours = filteredRentals.reduce((sum, rental) => {
+    if (rental.machineType === 'excavator' && rental.unitType === 'hourly') {
+      let slots = rental.timeSlots;
+      if (typeof slots === 'string') {
+        try {
+          slots = JSON.parse(slots);
+        } catch (e) {
+          slots = [];
+        }
+      }
+      if (Array.isArray(slots)) {
+        return sum + slots.filter(slot => !slot.isBreaker).reduce((slotSum, slot) => slotSum + calculateHours(slot.startTime || slot.start, slot.endTime || slot.end), 0);
+      }
+    }
+    return sum;
+  }, 0)
+
+  const totalBreakerHours = filteredRentals.reduce((sum, rental) => {
+    if (rental.machineType === 'excavator' && rental.unitType === 'hourly') {
+      let slots = rental.timeSlots;
+      if (typeof slots === 'string') {
+        try {
+          slots = JSON.parse(slots);
+        } catch (e) {
+          slots = [];
+        }
+      }
+      if (Array.isArray(slots)) {
+        return sum + slots.filter(slot => slot.isBreaker).reduce((slotSum, slot) => slotSum + calculateHours(slot.startTime || slot.start, slot.endTime || slot.end), 0);
+      }
     }
     return sum;
   }, 0)
@@ -1095,7 +1141,7 @@ if (user.role === 'admin') {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2">Total Paid Amount</h3>
                   <p className="text-3xl font-bold text-green-600">
@@ -1112,6 +1158,18 @@ if (user.role === 'admin') {
                   <h3 className="text-lg font-semibold mb-2">Total Acre</h3>
                   <p className="text-3xl font-bold text-blue-600">
                     {totalAcre.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-2">JCB Hours</h3>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {totalJCBHours.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-2">Breaker Hours</h3>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {totalBreakerHours.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -1250,10 +1308,10 @@ if (user.role === 'admin') {
                           <td className="px-2 py-2 whitespace-nowrap text-xs max-w-24 truncate" title={rental.customer.name}>{rental.customer.name}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.customer.contactNumber}</td>
                           <td className="px-2 py-2 whitespace-nowrap text-xs">{rental.quantity} {rental.unitType}</td>
-                          <td className="px-2 py-2 whitespace-nowrap text-xs">{formatCurrency(rental.totalAmount)}</td>
-                          <td className="px-2 py-2 whitespace-nowrap text-xs">{formatCurrency(rental.paidAmount || 0)}</td>
-                          <td className={`px-2 py-2 whitespace-nowrap text-xs ${getPaymentStatusColor(rental.paymentStatus)}`}>{rental.paymentStatus}</td>
-                          <td className="px-2 py-2 whitespace-nowrap text-xs">
+                          <td className="px-2 py-2 text-xs break-words max-w-24">{formatCurrency(rental.totalAmount)}</td>
+                          <td className="px-2 py-2 text-xs break-words max-w-24">{formatCurrency(rental.paidAmount || 0)}</td>
+                          <td className={`px-2 py-2 text-xs break-words max-w-24 ${getPaymentStatusColor(rental.paymentStatus)}`}>{rental.paymentStatus}</td>
+                          <td className="px-2 py-2 text-xs break-words max-w-24">
                             {rental.paymentStatus === 'PAID' ? (
                               <span className="text-green-600">{formatCurrency(0)}</span>
                             ) : (
@@ -3170,7 +3228,7 @@ if (user.role === 'admin') {
                     .slice(0, 3)
                     .map((expense) => (
                       <div key={expense.id} className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
+          <div className="flex justify-between items-start mb-2">
                           <div className="font-medium">{expense.description}</div>
                           <div className="font-semibold text-red-600">{formatCurrency(expense.amount)}</div>
                         </div>
