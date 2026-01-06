@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const rentalCount = await prisma.rental.count()
     const customerCount = await prisma.customer.count()
     const expenseCount = await prisma.expense.count()
+    const billCount = await prisma.bill.count()
 
     return NextResponse.json({
       success: true,
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
       rentalCount,
       customerCount,
       expenseCount,
+      billCount,
       timestamp: new Date().toISOString()
     })
   } catch (error) {

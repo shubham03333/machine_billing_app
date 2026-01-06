@@ -56,9 +56,35 @@ export async function POST(
       include: {
         customer: true,
         operator: true,
-        payments: true
+        payments: true,
+        bill: true
       }
     })
+
+    // Update bill's paidAmount if rental is part of a bill
+    if (updatedRental.billId) {
+      const billRentals = await prisma.rental.findMany({
+        where: { billId: updatedRental.billId }
+      })
+
+      const billPaidAmount = billRentals.reduce((sum, r) => sum + (r.paidAmount || 0), 0)
+      const billTotalAmount = billRentals.reduce((sum, r) => sum + r.totalAmount, 0)
+
+      let billStatus = 'UNPAID'
+      if (billPaidAmount >= billTotalAmount) {
+        billStatus = 'PAID'
+      } else if (billPaidAmount > 0) {
+        billStatus = 'PARTIALLY_PAID'
+      }
+
+      await prisma.bill.update({
+        where: { id: updatedRental.billId },
+        data: {
+          paidAmount: billPaidAmount,
+          status: billStatus
+        }
+      })
+    }
 
     return NextResponse.json({ payment, rental: updatedRental }, { status: 201 })
   } catch (error) {

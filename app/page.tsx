@@ -508,7 +508,7 @@ const fetchBills = async () => {
   try {
     const res = await fetch('/api/bills')
     const data = await res.json()
-    setBills(Array.isArray(data) ? data : [])
+    setBills(Array.isArray(data.bills) ? data.bills : [])
   } catch (err) {
     console.error('Failed to fetch bills')
     setBills([])
@@ -1307,13 +1307,13 @@ if (user.role === 'admin') {
                   </div>
                 </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-max">
+                <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Machine</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Operator</th>
-                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                        <th className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
@@ -1655,8 +1655,8 @@ if (user.role === 'admin') {
                   </select>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-max">
+              <div className="overflow-x-auto lg:overflow-x-visible">
+                <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
@@ -1766,7 +1766,7 @@ if (user.role === 'admin') {
                   />
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto lg:overflow-hidden">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
@@ -1864,7 +1864,7 @@ if (user.role === 'admin') {
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto lg:overflow-x-visible">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>

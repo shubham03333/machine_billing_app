@@ -138,6 +138,17 @@ export async function POST(request: NextRequest) {
     // Calculate total amount
     const totalAmount = rentals.reduce((sum, rental) => sum + rental.totalAmount, 0);
 
+    // Calculate total paid amount from rentals
+    const paidAmount = rentals.reduce((sum, rental) => sum + (rental.paidAmount || 0), 0);
+
+    // Determine bill status based on paid amount
+    let status = 'UNPAID';
+    if (paidAmount >= totalAmount) {
+      status = 'PAID';
+    } else if (paidAmount > 0) {
+      status = 'PARTIALLY_PAID';
+    }
+
     // Generate bill number (you can customize this logic)
     const billCount = await prisma.bill.count();
     const billNumber = `BILL-${String(billCount + 1).padStart(4, '0')}`;
@@ -150,6 +161,8 @@ export async function POST(request: NextRequest) {
           billNumber,
           customerId,
           totalAmount,
+          paidAmount,
+          status,
           dueDate: dueDate ? new Date(dueDate) : null,
           rentals: {
             connect: rentalIds.map(id => ({ id }))

@@ -148,49 +148,49 @@ Contact: +91-7558379410`
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white p-4 sm:p-6 lg:p-8 shadow-xl print:shadow-none print:p-4 border border-gray-200 print:border-none">
+    <div className="w-full max-w-4xl mx-auto bg-white p-3 sm:p-4 lg:p-6 shadow-xl print:shadow-none print:p-3 border border-gray-200 print:border-none">
       {/* Enhanced Header */}
-      <div className="text-center mb-6 sm:mb-8 lg:mb-10 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-4 sm:py-6 px-3 sm:px-4 rounded-lg print:bg-white print:text-black print:border-b-2 print:border-gray-300 print:py-4">
+      <div className="text-center mb-2 sm:mb-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-2 sm:py-3 px-2 sm:px-3 rounded-lg print:bg-white print:text-black print:border-b-2 print:border-gray-300 print:py-2">
         {/* Company Logo Placeholder */}
-        <div className="mb-3 sm:mb-4 print:mb-2">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full mx-auto flex items-center justify-center print:w-12 print:h-12">
-            <span className="text-blue-600 font-bold text-lg sm:text-xl print:text-lg">JD</span>
+        <div className="mb-1 sm:mb-2 print:mb-1">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full mx-auto flex items-center justify-center print:w-8 print:h-8">
+            <span className="text-blue-600 font-bold text-xs sm:text-sm print:text-xs">JD</span>
           </div>
         </div>
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 print:text-2xl print:text-gray-800">JD Agro & Earthmovers BILL</h1>
-        <p className="text-base sm:text-lg text-blue-100 print:text-gray-600">Professional Agro & Earthmovers Rental Services</p>
-        <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-blue-100 print:text-gray-500">
+        <h1 className="text-base sm:text-lg font-bold mb-1 print:text-lg print:text-gray-800">JD Agro & Earthmovers BILL</h1>
+        <p className="text-xs sm:text-sm text-blue-100 print:text-gray-600">Professional Agro & Earthmovers Rental Services</p>
+        <div className="mt-1 sm:mt-2 text-xs text-blue-100 print:text-gray-500">
           <p>Tuljapur, Dist- Dharashiv - 413601</p>
           <p>Phone: +91-7558379410 | Email: shubhamja3333@gmail.com</p>
         </div>
       </div>
 
       {/* Bill Details Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 mb-2 sm:mb-4">
         {/* Left Side - Bill To */}
         <div>
-          <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-gray-800">Bill To:</h2>
-          <div className="space-y-1">
-            <p className="text-sm sm:text-base font-medium">{bill.customer.name}</p>
-            <p className="text-xs sm:text-sm text-gray-600">{bill.customer.address || 'N/A'}</p>
-            <p className="text-xs sm:text-sm text-gray-600">Phone: {bill.customer.contactNumber}</p>
+          <h2 className="text-xs sm:text-sm font-semibold mb-1 text-gray-800">Bill To:</h2>
+          <div className="space-y-0.5">
+            <p className="text-xs font-medium">{bill.customer.name}</p>
+            <p className="text-xs text-gray-600">{bill.customer.address || 'N/A'}</p>
+            <p className="text-xs text-gray-600">Phone: {bill.customer.contactNumber}</p>
           </div>
         </div>
 
         {/* Right Side - Bill Info */}
         <div className="text-left sm:text-right">
-          <div className="space-y-1">
-            <p className="text-sm sm:text-base"><span className="font-semibold">Bill No:</span> {bill.billNumber}</p>
-            <p className="text-sm sm:text-base"><span className="font-semibold">Date:</span> {formatDateDDMMYYYY(bill.createdAt)}</p>
-            {bill.dueDate && <p className="text-sm sm:text-base"><span className="font-semibold">Due Date:</span> {formatDateDDMMYYYY(bill.dueDate)}</p>}
-            <p className="text-sm sm:text-base"><span className="font-semibold">Operator:</span> {bill.rentals[0]?.operator.name || 'N/A'}</p>
+          <div className="space-y-0.5">
+            <p className="text-xs"><span className="font-semibold">Bill No:</span> {bill.billNumber}</p>
+            <p className="text-xs"><span className="font-semibold">Date:</span> {formatDateDDMMYYYY(bill.createdAt)}</p>
+            {bill.dueDate && <p className="text-xs"><span className="font-semibold">Due Date:</span> {formatDateDDMMYYYY(bill.dueDate)}</p>}
+            <p className="text-xs"><span className="font-semibold">Operator:</span> {bill.rentals[0]?.operator.name || 'N/A'}</p>
           </div>
         </div>
       </div>
 
       {/* Enhanced Rental Details */}
-      <div className="mb-8">
-        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-800 border-b-2 border-blue-200 pb-2">Rental Details</h2>
+      <div className="mb-2">
+        <h2 className="text-sm sm:text-base font-bold mb-1 sm:mb-2 text-gray-800 border-b-2 border-blue-200 pb-1">Rental Details</h2>
 
         {/* Mobile Layout: Cards */}
         <div className="block sm:hidden space-y-4">
@@ -237,15 +237,15 @@ Contact: +91-7558379410`
         </div>
 
         {/* Desktop Layout: Table */}
-        <div className="hidden sm:block overflow-x-auto border-2 border-gray-200 rounded-xl shadow-sm">
-          <table className="w-full min-w-[600px]">
+        <div className="hidden sm:block border-2 border-gray-200 rounded-xl shadow-sm overflow-x-auto">
+          <table className="w-full table-fixed min-w-[600px]">
             <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
               <tr>
-                <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Description</th>
-                <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Time Slot</th>
-                <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Quantity</th>
-                <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Rate</th>
-                <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide">Amount</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide w-1/3">Description</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide w-1/6">Time Slot</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide w-1/6">Quantity</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide w-1/6">Rate</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-bold text-gray-800 border-b-2 border-gray-200 uppercase tracking-wide w-1/6">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -318,19 +318,19 @@ Contact: +91-7558379410`
                 } else {
                   return (
                     <tr key={rental.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} hover:bg-blue-25 transition-colors duration-150`}>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-800 border-b border-gray-100 font-medium">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs text-gray-800 border-b border-gray-100 font-medium">
                         {getRentalDescription(rental)}
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs text-center text-gray-800 border-b border-gray-100 font-medium">
                         N/A
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs text-center text-gray-800 border-b border-gray-100 font-medium">
                         {`${rental.quantity} ${rental.unitType}`}
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center text-gray-800 border-b border-gray-100 font-medium">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs text-center text-gray-800 border-b border-gray-100 font-medium">
                         ₹{rental.pricePerUnit.toLocaleString('en-IN')}
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-center font-bold text-gray-900 border-b border-gray-100">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs text-center font-bold text-gray-900 border-b border-gray-100">
                         {formatCurrency(rental.totalAmount)}
                       </td>
                     </tr>
@@ -343,7 +343,7 @@ Contact: +91-7558379410`
       </div>
 
       {/* Enhanced Summary Section */}
-      <div className="mb-8 sm:mb-10">
+      <div className="mb-6 sm:mb-8">
         <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-800 border-b-2 border-blue-200 pb-2">Payment Summary</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Total Amount Card */}
@@ -381,8 +381,8 @@ Contact: +91-7558379410`
         </div>
 
         {/* Payment History */}
-        <div className="mt-4 sm:mt-6">
-          <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 text-gray-800">Payment History</h3>
+        <div className="mt-3 sm:mt-4">
+          <h3 className="text-sm sm:text-base font-bold mb-1 sm:mb-2 text-gray-800">Payment History</h3>
           <div className="bg-white border-2 border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="max-h-28 sm:max-h-32 overflow-y-auto">
               {getAllPayments().length > 0 ? (
@@ -409,13 +409,13 @@ Contact: +91-7558379410`
       </div>
 
       {/* Footer */}
-      <div className="text-center mb-6 border-t border-gray-300 pt-3">
-        <p className="text-base text-gray-700">Thank you for your business!</p>
+      <div className="text-center mb-4 border-t border-gray-300 pt-2">
+        <p className="text-sm text-gray-700">Thank you for your business!</p>
         <p className="text-xs text-gray-600">For any queries, please contact us.</p>
       </div>
 
       {/* Enhanced Professional Buttons */}
-      <div className="flex flex-wrap justify-center gap-3 sm:gap-4 print:hidden mt-6">
+      <div className="flex flex-wrap justify-center gap-3 sm:gap-4 print:hidden mt-4">
         {/* <button
           onClick={onPrint}
           className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
