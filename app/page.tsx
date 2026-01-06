@@ -145,6 +145,18 @@ interface Customer {
   createdAt: string
 }
 
+interface Bill {
+  id: number
+  billNumber: string
+  customer: { name: string; address?: string; contactNumber: string }
+  rentals: Rental[]
+  totalAmount: number
+  paidAmount: number
+  status: string
+  dueDate?: string
+  createdAt: string
+}
+
 export default function Home() {
   const [pin, setPin] = useState('')
   const [user, setUser] = useState<User | null>(null)
@@ -243,6 +255,7 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
   const [customers, setCustomers] = useState<Customer[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [operators, setOperators] = useState<Operator[]>([])
+  const [bills, setBills] = useState<Bill[]>([])
   const [selectedOperatorId, setSelectedOperatorId] = useState<number | null>(null)
   const [expenseDescription, setExpenseDescription] = useState('')
 
@@ -411,6 +424,7 @@ const [rentalFilter, setRentalFilter] = useState({
       fetchCustomers()
       fetchExpenses()
       fetchOperators()
+      fetchBills()
     }
   }, [user])
 
@@ -487,6 +501,17 @@ const fetchOperators = async () => {
     setOperators(data)
   } catch (err) {
     console.error('Failed to fetch operators')
+  }
+}
+
+const fetchBills = async () => {
+  try {
+    const res = await fetch('/api/bills')
+    const data = await res.json()
+    setBills(Array.isArray(data) ? data : [])
+  } catch (err) {
+    console.error('Failed to fetch bills')
+    setBills([])
   }
 }
 
@@ -1817,6 +1842,97 @@ if (user.role === 'admin') {
                         Next
                       </button>
                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {adminActiveTab === 'bills' && (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="p-6 border-b">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">All Bills</h2>
+                  <button
+                    onClick={() => {
+                      fetchBills()
+                    }}
+                    className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                  >
+                    <RefreshCw size={16} />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bill Number</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {bills.map((bill) => (
+                      <tr key={bill.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-blue-600">
+                          {bill.billNumber}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap truncate" title={bill.customer.name}>
+                          {bill.customer.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {bill.customer.contactNumber}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-green-600 font-semibold">
+                          {formatCurrency(bill.totalAmount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-semibold">
+                          {formatCurrency(bill.paidAmount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            bill.status === 'PAID' ? 'bg-green-100 text-green-800' :
+                            bill.status === 'PARTIALLY_PAID' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {bill.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {bill.dueDate ? formatDateDDMMYYYY(bill.dueDate) : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDateDDMMYYYY(bill.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedRentalsForBill(bill.rentals)
+                                setShowBillModal(true)
+                              }}
+                              className="text-indigo-600 hover:text-indigo-900"
+                              title="View Bill"
+                            >
+                              <FileText size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {bills.length === 0 && (
+                  <div className="px-6 py-8 text-center">
+                    <p className="text-gray-500">No bills found. Create bills from rentals to see them here.</p>
                   </div>
                 )}
               </div>
