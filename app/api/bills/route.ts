@@ -57,13 +57,35 @@ export async function GET(request: NextRequest) {
       take: limit
     });
 
-    // Parse timeSlots JSON for each rental in each bill
-    const billsWithParsedTimeSlots = bills.map(bill => ({
-      ...bill,
-      rentals: bill.rentals.map(rental => ({
-        ...rental,
-        timeSlots: rental.timeSlots ? (typeof rental.timeSlots === 'string' ? JSON.parse(rental.timeSlots) : rental.timeSlots) : []
-      }))
+    // Sync paidAmount for each bill and parse timeSlots
+    const billsWithParsedTimeSlots = await Promise.all(bills.map(async (bill) => {
+      // Calculate accurate paidAmount from rental.paidAmount (since payments may not be recorded individually)
+      const accuratePaidAmount = bill.rentals.reduce((sum, rental) => {
+        return sum + (rental.paidAmount || 0);
+      }, 0);
+
+      // Update bill's paidAmount if it doesn't match
+      if (bill.paidAmount !== accuratePaidAmount) {
+        await prisma.bill.update({
+          where: { id: bill.id },
+          data: {
+            paidAmount: accuratePaidAmount,
+            status: accuratePaidAmount >= bill.totalAmount ? 'PAID' :
+                    accuratePaidAmount > 0 ? 'PARTIALLY_PAID' : 'UNPAID'
+          }
+        });
+        bill.paidAmount = accuratePaidAmount;
+        bill.status = accuratePaidAmount >= bill.totalAmount ? 'PAID' :
+                      accuratePaidAmount > 0 ? 'PARTIALLY_PAID' : 'UNPAID';
+      }
+
+      return {
+        ...bill,
+        rentals: bill.rentals.map(rental => ({
+          ...rental,
+          timeSlots: rental.timeSlots ? (typeof rental.timeSlots === 'string' ? JSON.parse(rental.timeSlots) : rental.timeSlots) : []
+        }))
+      };
     }));
 
     const total = await prisma.bill.count({ where });

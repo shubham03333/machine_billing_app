@@ -2045,8 +2045,8 @@ if (user.role === 'admin') {
                 <input
                   type="number"
                   value={editRentalData.totalAmount}
-                  onChange={(e) => setEditRentalData({...editRentalData, totalAmount: e.target.value})}
-                  className="w-full p-2 border rounded-lg"
+                  readOnly
+                  className="w-full p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
                 />
               </div>
               <div>

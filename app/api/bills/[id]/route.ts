@@ -61,6 +61,26 @@ export async function GET(
       );
     }
 
+    // Calculate accurate paidAmount from rental.paidAmount (since payments may not be recorded individually)
+    const accuratePaidAmount = bill.rentals.reduce((sum, rental) => {
+      return sum + (rental.paidAmount || 0);
+    }, 0);
+
+    // Update bill's paidAmount if it doesn't match
+    if (bill.paidAmount !== accuratePaidAmount) {
+      await prisma.bill.update({
+        where: { id: billId },
+        data: {
+          paidAmount: accuratePaidAmount,
+          status: accuratePaidAmount >= bill.totalAmount ? 'PAID' :
+                  accuratePaidAmount > 0 ? 'PARTIALLY_PAID' : 'UNPAID'
+        }
+      });
+      bill.paidAmount = accuratePaidAmount;
+      bill.status = accuratePaidAmount >= bill.totalAmount ? 'PAID' :
+                    accuratePaidAmount > 0 ? 'PARTIALLY_PAID' : 'UNPAID';
+    }
+
     // Parse timeSlots JSON for each rental
     const billWithParsedTimeSlots = {
       ...bill,

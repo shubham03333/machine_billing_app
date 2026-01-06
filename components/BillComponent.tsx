@@ -154,7 +154,7 @@ const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint })
     return allPayments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }
 
-  const totalPaid = bill.paidAmount || getAllPayments().reduce((sum, payment) => sum + payment.amount, 0)
+  const totalPaid = bill.paidAmount
   const balanceDue = bill.totalAmount - totalPaid
 
   const shareBillOnWhatsApp = () => {

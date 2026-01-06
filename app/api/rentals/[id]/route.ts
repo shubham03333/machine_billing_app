@@ -212,6 +212,31 @@ export async function PUT(
       }
     }
 
+    // Update bill's paidAmount if rental is part of a bill
+    if (updatedRental.billId) {
+      const billRentals = await prisma.rental.findMany({
+        where: { billId: updatedRental.billId }
+      })
+
+      const billPaidAmount = billRentals.reduce((sum, r) => sum + (r.paidAmount || 0), 0)
+      const billTotalAmount = billRentals.reduce((sum, r) => sum + r.totalAmount, 0)
+
+      let billStatus = 'UNPAID'
+      if (billPaidAmount >= billTotalAmount) {
+        billStatus = 'PAID'
+      } else if (billPaidAmount > 0) {
+        billStatus = 'PARTIALLY_PAID'
+      }
+
+      await prisma.bill.update({
+        where: { id: updatedRental.billId },
+        data: {
+          paidAmount: billPaidAmount,
+          status: billStatus
+        }
+      })
+    }
+
     return NextResponse.json(updatedRental)
   } catch (error) {
     console.error('Update rental error:', error)
@@ -243,9 +268,39 @@ export async function DELETE(
       where: { rentalId: id }
     })
 
+    // Get the rental before deleting to check if it's part of a bill
+    const rentalToDelete = await prisma.rental.findUnique({
+      where: { id }
+    })
+
     await prisma.rental.delete({
       where: { id }
     })
+
+    // Update bill's paidAmount if rental was part of a bill
+    if (rentalToDelete?.billId) {
+      const billRentals = await prisma.rental.findMany({
+        where: { billId: rentalToDelete.billId }
+      })
+
+      const billPaidAmount = billRentals.reduce((sum, r) => sum + (r.paidAmount || 0), 0)
+      const billTotalAmount = billRentals.reduce((sum, r) => sum + r.totalAmount, 0)
+
+      let billStatus = 'UNPAID'
+      if (billPaidAmount >= billTotalAmount) {
+        billStatus = 'PAID'
+      } else if (billPaidAmount > 0) {
+        billStatus = 'PARTIALLY_PAID'
+      }
+
+      await prisma.bill.update({
+        where: { id: rentalToDelete.billId },
+        data: {
+          paidAmount: billPaidAmount,
+          status: billStatus
+        }
+      })
+    }
 
     return NextResponse.json({ message: 'Rental deleted successfully' })
   } catch (error) {
