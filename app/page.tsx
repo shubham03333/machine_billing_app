@@ -1167,34 +1167,34 @@ if (user.role === 'admin') {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2">Total Paid Amount</h3>
-                  <p className="text-3xl font-bold text-green-600">
+                  <p className="text-2xl md:text-3xl font-bold text-green-600 break-words">
                     {formatCurrency(totalPaidAmount)}
                   </p>
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2">Total Pending Amount</h3>
-                  <p className="text-3xl font-bold text-red-600">
+                  <p className="text-2xl md:text-3xl font-bold text-red-600 break-words">
                     {formatCurrency(totalPendingAmount)}
                   </p>
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2">Total Acre</h3>
-                  <p className="text-3xl font-bold text-blue-600">
+                  <p className="text-2xl md:text-3xl font-bold text-blue-600 break-words">
                     {totalAcre.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2">JCB Hours</h3>
-                  <p className="text-3xl font-bold text-blue-600">
+                  <p className="text-2xl md:text-3xl font-bold text-blue-600 break-words">
                     {totalJCBHours.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-2">Breaker Hours</h3>
-                  <p className="text-3xl font-bold text-blue-600">
+                  <p className="text-2xl md:text-3xl font-bold text-blue-600 break-words">
                     {totalBreakerHours.toFixed(2)}
                   </p>
                 </div>
