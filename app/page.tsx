@@ -935,8 +935,9 @@ const fetchBills = async () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-          <h1 className="text-2xl font-bold text-center mb-6">🚜 JD Agro & Earthmovers</h1>
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <img src="/rentralogo.png" alt="JD Agro & Earthmovers Logo" className="mx-auto mb-4 w-32 h-auto" />
+        <h1 className="text-2xl font-bold text-center mb-6">🚜 JD Agro & Earthmovers</h1>
           <div className="space-y-4">
             <input
               type="password"
@@ -2616,6 +2617,7 @@ if (user.role === 'admin') {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
+        <img src="/rentralogo.png" alt="JD Agro & Earthmovers Logo" className="mx-auto mb-4 w-32 h-auto" />
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
           <h1 className="text-2xl font-bold">Welcome, {user.name}</h1>
           <button
