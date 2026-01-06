@@ -2618,13 +2618,13 @@ if (user.role === 'admin') {
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
         <img src="/rentralogo.png" alt="JD Agro & Earthmovers Logo" className="mx-auto mb-4 w-32 h-auto" />
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
+        <div className="flex flex-row justify-between items-center mb-6 gap-2">
           <h1 className="text-2xl font-bold">Welcome, {user.name}</h1>
           <button
             onClick={() => setUser(null)}
-            className="bg-red-500 text-white px-3 py-2 sm:px-4 rounded-lg text-sm sm:text-base self-end sm:self-auto"
+            className="bg-red-500 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center"
           >
-            Logout
+            <LogOut size={16} />
           </button>
         </div>
 
