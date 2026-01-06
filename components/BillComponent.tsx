@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import html2canvas from 'html2canvas'
 
 interface Payment {
   id: number
@@ -50,6 +51,37 @@ interface BillComponentProps {
 }
 
 const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint }) => {
+  const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'marathi'>('english')
+
+  const translations = {
+    english: {
+      billTitle: 'JD Agro & Earthmovers Bill',
+      billNo: 'Bill No',
+      customer: 'Customer',
+      date: 'Date',
+      dueDate: 'Due Date',
+      totalAmount: 'Total Amount',
+      paidAmount: 'Paid Amount',
+      balanceDue: 'Balance Due',
+      rentalDetails: 'Rental Details',
+      thankYou: 'Thank you for your business!',
+      contact: 'Contact: +91-7558379410'
+    },
+    marathi: {
+      billTitle: 'जेड अॅग्रो अँड अर्थमोव्हर्स बिल',
+      billNo: 'बिल क्रमांक',
+      customer: 'ग्राहक',
+      date: 'तारीख',
+      dueDate: 'नियत तारीख',
+      totalAmount: 'एकूण रक्कम',
+      paidAmount: 'दिलेली रक्कम',
+      balanceDue: 'शिल्लक रक्कम',
+      rentalDetails: 'भाडे तपशील',
+      thankYou: 'आमच्या सेवेसाठी धन्यवाद!',
+      contact: 'संपर्क: +91-7558379410'
+    }
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -127,28 +159,84 @@ const BillComponent: React.FC<BillComponentProps> = ({ bill, onClose, onPrint })
 
   const shareBillOnWhatsApp = () => {
     const customerPhone = bill.customer.contactNumber.replace(/\D/g, '') // Remove non-numeric characters
-    const billText = `*JD Agro & Earthmovers Bill*
+    const t = translations[selectedLanguage]
 
-Bill No: ${bill.billNumber}
-Customer: ${bill.customer.name}
-Date: ${formatDateDDMMYYYY(bill.createdAt)}
-${bill.dueDate ? `Due Date: ${formatDateDDMMYYYY(bill.dueDate)}\n` : ''}
-*Total Amount:* ₹${bill.totalAmount.toLocaleString('en-IN')}
-*Paid Amount:* ₹${totalPaid.toLocaleString('en-IN')}
-*Balance Due:* ₹${balanceDue.toLocaleString('en-IN')}
+    const billText = `*${t.billTitle}*
 
-*Rental Details:*
+${t.billNo}: ${bill.billNumber}
+${t.customer}: ${bill.customer.name}
+${t.date}: ${formatDateDDMMYYYY(bill.createdAt)}
+${bill.dueDate ? `${t.dueDate}: ${formatDateDDMMYYYY(bill.dueDate)}\n` : ''}
+*${t.totalAmount}:* ₹${bill.totalAmount.toLocaleString('en-IN')}
+*${t.paidAmount}:* ₹${totalPaid.toLocaleString('en-IN')}
+*${t.balanceDue}:* ₹${balanceDue.toLocaleString('en-IN')}
+
+*${t.rentalDetails}:*
 ${bill.rentals.map(rental => `- ${getRentalDescription(rental)}: ₹${rental.totalAmount.toLocaleString('en-IN')}`).join('\n')}
 
-Thank you for your business!
-Contact: +91-7558379410`
+${t.thankYou}
+${t.contact}`
 
     const whatsappUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(billText)}`
     window.open(whatsappUrl, '_blank')
   }
 
+  const shareBillAsImageOnWhatsApp = async () => {
+    const billElement = document.getElementById('bill-component')
+    if (!billElement) return
+
+    try {
+      const canvas = await html2canvas(billElement, {
+        scale: 2, // Higher resolution
+        useCORS: true,
+        allowTaint: true
+      })
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob)
+          } else {
+            reject(new Error('Failed to generate blob'))
+          }
+        }, 'image/png')
+      })
+      const file = new File([blob], `bill-${bill.billNumber}.png`, { type: 'image/png' })
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'Bill',
+          text: 'Here is your bill',
+          files: [file]
+        })
+      } else {
+        // Fallback: download the image and open WhatsApp with instructions
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `bill-${bill.billNumber}.png`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        // Open WhatsApp with detailed message including attachment instructions
+        const customerPhone = bill.customer.contactNumber.replace(/\D/g, '')
+        const t = translations[selectedLanguage]
+        const message = `${t.thankYou}. Your bill has been downloaded to your device. Please attach the downloaded bill-${bill.billNumber}.png file to this message.`
+        const whatsappUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(message)}`
+        window.open(whatsappUrl, '_blank')
+
+        // Show user-friendly alert with instructions
+        alert(`Bill image downloaded as bill-${bill.billNumber}.png. WhatsApp has been opened - please attach the downloaded image file to your message to the customer.`)
+      }
+    } catch (error) {
+      console.error('Error generating bill image:', error)
+      alert('Failed to generate bill image. Please try again.')
+    }
+  }
+
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white p-3 sm:p-4 lg:p-6 shadow-xl print:shadow-none print:p-3 border border-gray-200 print:border-none">
+    <div id="bill-component" className="w-full max-w-4xl mx-auto bg-white p-3 sm:p-4 lg:p-6 shadow-xl print:shadow-none print:p-3 border border-gray-200 print:border-none">
       {/* Enhanced Header */}
       <div className="text-center mb-2 sm:mb-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-2 sm:py-3 px-2 sm:px-3 rounded-lg print:bg-white print:text-black print:border-b-2 print:border-gray-300 print:py-2">
         {/* Company Logo Placeholder */}
@@ -414,6 +502,37 @@ Contact: +91-7558379410`
         <p className="text-xs text-gray-600">For any queries, please contact us.</p>
       </div>
 
+      {/* Language Selector */}
+      <div className="flex justify-center mb-4 print:hidden">
+        <div className="bg-gray-100 p-3 rounded-lg">
+          <label className="text-sm font-medium text-gray-700 mr-3">Select Language:</label>
+          <div className="inline-flex rounded-md shadow-sm">
+            <button
+              type="button"
+              onClick={() => setSelectedLanguage('english')}
+              className={`px-4 py-2 text-sm font-medium rounded-l-md border ${
+                selectedLanguage === 'english'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedLanguage('marathi')}
+              className={`px-4 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
+                selectedLanguage === 'marathi'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              मराठी
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Enhanced Professional Buttons */}
       <div className="flex flex-wrap justify-center gap-3 sm:gap-4 print:hidden mt-4">
         {/* <button
@@ -429,6 +548,13 @@ Contact: +91-7558379410`
         >
           <span>📱</span>
           Share on WhatsApp
+        </button>
+        <button
+          onClick={shareBillAsImageOnWhatsApp}
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+        >
+          <span>📸</span>
+          Share as Image
         </button>
         <button
           onClick={onClose}
