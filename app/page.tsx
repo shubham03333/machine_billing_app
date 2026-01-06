@@ -118,7 +118,7 @@ interface Rental {
   // JCB hourly specific fields
   normalHourlyRate?: number
   breakerHourlyRate?: number
-  timeSlots?: Array<{ startTime: string; endTime: string; isBreaker: boolean; calculatedAmount: number }>
+  timeSlots?: Array<{ startTime?: string; endTime?: string; start?: string; end?: string; isBreaker: boolean; calculatedAmount: number }>
 }
 
 interface Expense {
@@ -679,7 +679,7 @@ const fetchBills = async () => {
         timeSlots = []
       }
     }
-    const mappedTimeSlots = timeSlots ? timeSlots.map((slot: any) => ({ start: slot.startTime || slot.start, end: slot.endTime || slot.end, isBreaker: slot.isBreaker, calculatedAmount: slot.calculatedAmount })) : []
+    const mappedTimeSlots = timeSlots ? timeSlots.map((slot: any) => ({ start: slot.startTime || slot.start || '', end: slot.endTime || slot.end || '', isBreaker: slot.isBreaker, calculatedAmount: slot.calculatedAmount })) : []
     const normalHours = mappedTimeSlots.filter((s: any) => !s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.start, s.end), 0).toString()
     const breakerHours = mappedTimeSlots.filter((s: any) => s.isBreaker).reduce((sum: number, s: any) => sum + calculateHours(s.start, s.end), 0).toString()
     setEditRentalData({
@@ -1048,7 +1048,7 @@ const getExpenseCategory = (expense: Expense) => {
         }
       }
       if (Array.isArray(slots)) {
-        return sum + slots.filter(slot => !slot.isBreaker).reduce((slotSum, slot) => slotSum + calculateHours(slot.startTime || slot.start, slot.endTime || slot.end), 0);
+        return sum + slots.reduce((slotSum, slot) => slotSum + calculateHours(slot.startTime || slot.start || '', slot.endTime || slot.end || ''), 0);
       }
     }
     return sum;
@@ -1065,7 +1065,7 @@ const getExpenseCategory = (expense: Expense) => {
         }
       }
       if (Array.isArray(slots)) {
-        return sum + slots.filter(slot => slot.isBreaker).reduce((slotSum, slot) => slotSum + calculateHours(slot.startTime || slot.start, slot.endTime || slot.end), 0);
+        return sum + slots.filter(slot => slot.isBreaker).reduce((slotSum, slot) => slotSum + calculateHours(slot.startTime || slot.start || '', slot.endTime || slot.end || ''), 0);
       }
     }
     return sum;
@@ -3388,8 +3388,29 @@ if (user.role === 'admin') {
                   }
                 }
                 if (Array.isArray(slots)) {
-                  const jcbHours = slots.filter(slot => !slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime || slot.start, slot.endTime || slot.end), 0);
-                  const breakerHours = slots.filter(slot => slot.isBreaker).reduce((sum, slot) => sum + calculateHours(slot.startTime || slot.start, slot.endTime || slot.end), 0);
+                  const getStartEnd = (slot: any) => {
+  const start = slot.startTime ?? slot.start;
+  const end = slot.endTime ?? slot.end;
+
+  if (!start || !end) return null;
+
+  return { start, end };
+};
+                  const jcbHours = slots
+  .filter(slot => !slot.isBreaker)
+  .reduce((sum, slot) => {
+    const times = getStartEnd(slot);
+    if (!times) return sum;
+    return sum + calculateHours(times.start, times.end);
+  }, 0);
+
+const breakerHours = slots
+  .filter(slot => slot.isBreaker)
+  .reduce((sum, slot) => {
+    const times = getStartEnd(slot);
+    if (!times) return sum;
+    return sum + calculateHours(times.start, times.end);
+  }, 0);
                   return (
                     <div>
                       JCB: {jcbHours.toFixed(2)} hr @ ₹{rental.normalHourlyRate}
