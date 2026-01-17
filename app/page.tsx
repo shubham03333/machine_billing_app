@@ -379,26 +379,16 @@ const [rentalFilter, setRentalFilter] = useState({
   const [originalPaidAmount, setOriginalPaidAmount] = useState(0)
   const [paidAmountError, setPaidAmountError] = useState('')
 
-  // Auto-calculate total amount when quantity, price per unit, machine type, or unit type changes
+  // Auto-calculate total amount when quantity or price per unit changes
   useEffect(() => {
     const quantity = parseFloat(editRentalData.quantity) || 0
-    let pricePerUnit = parseFloat(editRentalData.pricePerUnit) || 0
-
-    // Update price per unit when machine type or unit type changes
-    if (editRentalData.machineType && editRentalData.unitType) {
-      const standardPrice = STANDARD_PRICES[editRentalData.machineType as keyof typeof STANDARD_PRICES]?.[editRentalData.unitType as keyof typeof STANDARD_PRICES[keyof typeof STANDARD_PRICES]]
-      if (standardPrice !== undefined) {
-        pricePerUnit = standardPrice
-      }
-    }
-
+    const pricePerUnit = parseFloat(editRentalData.pricePerUnit) || 0
     const totalAmount = quantity * pricePerUnit
     setEditRentalData(prev => ({
       ...prev,
-      pricePerUnit: pricePerUnit.toString(),
       totalAmount: totalAmount.toString()
     }))
-  }, [editRentalData.quantity, editRentalData.pricePerUnit, editRentalData.machineType, editRentalData.unitType])
+  }, [editRentalData.quantity, editRentalData.pricePerUnit])
   const [editExpenseData, setEditExpenseData] = useState({
     description: '',
     amount: '',
