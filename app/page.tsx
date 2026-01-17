@@ -285,7 +285,8 @@ const updateTimeSlot = (index: number, field: 'start' | 'end', value: string) =>
     dateFrom: '',
     dateTo: '',
     category: '',
-    operator: ''
+    operator: '',
+    jcbFilter: false
   })
 const [rentalFilter, setRentalFilter] = useState({
   dateFrom: '',
@@ -975,6 +976,7 @@ const getExpenseCategory = (expense: Expense) => {
       if (toDate && expenseDate > toDate) return false
       if (expenseFilter.category && getExpenseCategory(expense) !== expenseFilter.category) return false
       if (expenseFilter.operator && expense.operator.name !== expenseFilter.operator) return false
+      if (expenseFilter.jcbFilter && !expense.description.toLowerCase().startsWith('jcb')) return false
 
       return true
     })
@@ -1553,6 +1555,12 @@ if (user.role === 'admin') {
                 >
                   {loading ? 'Saving...' : 'Save Expense'}
                 </button>
+                <button
+                  onClick={() => setExpenseDescription('jcb ' + expenseDescription)}
+                  className="w-full bg-orange-500 text-white p-3 rounded-lg hover:bg-orange-600"
+                >
+                  JCB Expense
+                </button>
               </div>
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-4">Latest Expenses</h3>
@@ -1644,6 +1652,15 @@ if (user.role === 'admin') {
                       <option key={operator} value={operator}>{operator}</option>
                     ))}
                   </select>
+                  <label className="flex items-center gap-2 px-3 py-1 border rounded text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={expenseFilter.jcbFilter}
+                      onChange={(e) => setExpenseFilter({...expenseFilter, jcbFilter: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <span>JCB Expenses Only</span>
+                  </label>
                 </div>
               </div>
               <div className="overflow-x-auto lg:overflow-x-visible">
